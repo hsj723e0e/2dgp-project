@@ -8,9 +8,9 @@ from time import perf_counter
 from pico2d import pico2d as p2
 import sdl2
 
-from game_state import GameState, MATERIAL_PRICES
+from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
-from workshop import HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
+from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
@@ -155,6 +155,14 @@ class Game:
             available, reason = self.state.purchase_status(entry.image, self.purchase_quantity)
             cost = MATERIAL_PRICES[entry.image] * self.purchase_quantity
             return f"{cost} 코인 구매", available, reason
+        if self.active_station.name == "작업대":
+            if self.state.job is not None:
+                if self.state.ready_to_collect:
+                    return "완성품 회수", True, ""
+                return "제작 중", False, ""
+            entry = self.active_station.entries[self.selected_entry]
+            available, reason = self.state.craft_status(entry.image)
+            return "제작 시작", available, reason
         return None
 
     def perform_action(self):
@@ -163,6 +171,12 @@ class Game:
             self.feedback_success, self.feedback = self.state.purchase(entry.image, self.purchase_quantity)
             if self.feedback_success:
                 self.purchase_quantity = 1
+        elif self.active_station.name == "작업대":
+            if self.state.job is not None:
+                self.feedback_success, self.feedback = self.state.collect()
+            else:
+                entry = self.active_station.entries[self.selected_entry]
+                self.feedback_success, self.feedback = self.state.start_craft(entry.image)
 
     def draw_button(self, bounds, label, enabled=True):
         left, bottom, right, top = bounds
@@ -223,8 +237,14 @@ class Game:
         entry = station.entries[self.selected_entry]
         self.icons[entry.image].draw(816, 428, 144, 144)
         self.text(654, 329, entry.name, 22)
-        # Recipe text is split at the separator to fit the detail column.
         lines = entry.description.split(" · ")
+        if station.name == "작업대":
+            recipe = RECIPES[entry.image]
+            material_names = {material.image: material.name for material in MATERIALS}
+            lines = [
+                f"{material_names[name]} {quantity}개 / 보유 {self.state.materials[name]}개"
+                for name, quantity in recipe.ingredients.items()
+            ]
         for index, line in enumerate(lines):
             self.text(654, 300 - index * 22, line, 15, MUTED)
         if station.name == "재료 보관대":
@@ -236,6 +256,13 @@ class Game:
             self.text(722, 229, "-")
             self.text(921, 229, "+")
             self.text(764, 229, f"수량 {self.purchase_quantity}개", 18)
+        elif station.name == "작업대":
+            self.text(654, 255, f"제작 시간 {RECIPES[entry.image].seconds}초", 18, GOLD)
+            if self.state.job is not None:
+                equipment_name = next(item.name for item in EQUIPMENT if item.image == self.state.job.equipment)
+                self.text(654, 230, equipment_name, 18, CYAN)
+                status = "완성 · 회수 가능" if self.state.ready_to_collect else f"남은 시간 {self.state.remaining:.1f}초"
+                self.text(654, 208, status, 15, GOLD)
         self.draw_button(CLOSE_BUTTON, "돌아가기")
         action = self.panel_action()
         if action:
@@ -243,8 +270,22 @@ class Game:
             self.draw_button(ACTION_BUTTON, label, available)
             if reason and not self.feedback:
                 self.text(654, 191, reason, 15, GOLD)
-        if self.feedback:
+        if self.feedback and not (station.name == "작업대" and self.state.job is not None):
             self.text(654, 191, self.feedback, 15, CYAN if self.feedback_success else GOLD)
+
+    def draw_crafting_status(self):
+        if self.state.job is None:
+            return
+        name = next(entry.name for entry in EQUIPMENT if entry.image == self.state.job.equipment)
+        fill_rect(366, 665, 600, 39, INK, 240)
+        if self.state.ready_to_collect:
+            self.text(382, 687, f"{name} 완성 · 작업대에서 회수", 18, CYAN)
+            progress = 1.0
+        else:
+            self.text(382, 687, f"{name} 제작 중 · {self.state.remaining:.1f}초", 18, GOLD)
+            progress = 1 - self.state.remaining / RECIPES[self.state.job.equipment].seconds
+        fill_rect(382, 669, 568, 3, (40, 68, 83))
+        fill_rect(382, 669, 568 * progress, 3, CYAN)
 
     def draw_coin_counter(self):
         fill_rect(1044, 665, 218, 39, INK, 240)
@@ -287,6 +328,8 @@ class Game:
             controls = "↑ ↓ / W S 선택   E / ESC 닫기"
             if self.active_station.name == "재료 보관대":
                 controls = "↑ ↓ 선택   ← → 수량   SPACE 구매   E / ESC 닫기"
+            elif self.active_station.name == "작업대":
+                controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
@@ -297,6 +340,7 @@ class Game:
             self.text(483, 23, f"E / ENTER  {nearby.name} 이용", 18, GOLD)
         if self.active_station:
             self.draw_panel()
+        self.draw_crafting_status()
         self.draw_coin_counter()
 
 
