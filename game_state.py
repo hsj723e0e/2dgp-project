@@ -51,6 +51,17 @@ class EquipmentUnit:
     level: int = 0
 
 
+@dataclass(frozen=True)
+class SessionResult:
+    personal_levels: tuple
+    coins: int
+    sold_orders: int
+    rental_successes: int
+    rental_losses: int
+    pending_rentals: int
+    collected_equipment: int
+
+
 def basic_upgrade_cost(unit):
     base_cost = 8 if unit.equipment.endswith("_01") else 12
     return base_cost * (unit.level + 1)
@@ -83,6 +94,9 @@ class GameState:
         self.current_order = create_order(1, "npc_novice", self.rng)
         self.next_order_id = 2
         self.next_customer_at = None
+        self.result = None
+        self.sold_order_count = 0
+        self.collected_equipment_count = 0
 
     @property
     def session_remaining(self):
@@ -90,13 +104,29 @@ class GameState:
 
     @property
     def session_over(self):
-        return self.clock() >= self.session_end_at
+        return self.result is not None or self.clock() >= self.session_end_at
 
     @property
     def effective_time(self):
         return min(self.clock(), self.session_end_at)
 
+    def finish_session(self):
+        if self.result is None and self.session_over:
+            self.update_rentals()
+            self.result = SessionResult(
+                personal_levels=tuple(self.personal_equipment.items()),
+                coins=self.coins,
+                sold_orders=self.sold_order_count,
+                rental_successes=sum(contract.status == "success" for contract in self.rentals),
+                rental_losses=sum(contract.status == "lost" for contract in self.rentals),
+                pending_rentals=sum(contract.status == "active" for contract in self.rentals),
+                collected_equipment=self.collected_equipment_count,
+            )
+        return self.result
+
     def apply_cheat(self):
+        if self.session_over:
+            return
         self.coins = 999
         for inventory in (self.materials, self.equipment, self.rewards):
             for item in inventory:
@@ -149,6 +179,8 @@ class GameState:
             self.equipment[unit.equipment] += 1
 
     def basic_upgrade_status(self, equipment, unit_id):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if equipment not in self.equipment:
             return False, "강화할 수 없는 장비입니다."
         unit = next((item for item in self.available_units(equipment) if item.identifier == unit_id), None)
@@ -170,6 +202,8 @@ class GameState:
         return True, f"선택한 장비를 +{unit.level}로 강화했습니다."
 
     def personal_craft_status(self, equipment):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if equipment not in self.personal_equipment:
             return False, "제작할 수 없는 개인 장비입니다."
         if self.personal_equipment[equipment] is not None:
@@ -187,6 +221,8 @@ class GameState:
         return True, "개인 최상급 장비를 제작했습니다."
 
     def personal_upgrade_status(self, equipment):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if equipment not in self.personal_equipment or self.personal_equipment[equipment] is None:
             return False, "먼저 개인 장비를 제작하세요."
         if self.personal_equipment[equipment] >= MAX_ENHANCEMENT:
@@ -231,6 +267,8 @@ class GameState:
         self.next_customer_at = next_customer_at
 
     def decline_order(self, order_id):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if self.current_order is None or self.current_order.identifier != order_id:
             return False, "이미 처리된 주문입니다."
         self.finish_order()
@@ -271,6 +309,8 @@ class GameState:
         return total
 
     def order_status(self, order_id, unit_ids=None):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         order = self.current_order
         if order is None or order.identifier != order_id:
             return False, "이미 처리된 주문입니다."
@@ -293,10 +333,13 @@ class GameState:
         coins = self.sale_value(order)
         self.take_units(self.order_units(order, unit_ids))
         self.coins += coins
+        self.sold_order_count += 1
         self.finish_order()
         return True, f"판매 완료 · {coins} 코인을 받았습니다."
 
     def information_status(self, order_id):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         order = self.current_order
         if order is None or order.identifier != order_id:
             return False, "이미 처리된 주문입니다."
@@ -369,6 +412,8 @@ class GameState:
                 contract.status = "lost"
 
     def purchase_status(self, material, quantity):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if material not in MATERIAL_PRICES:
             return False, "구매할 수 없는 재료입니다."
         if type(quantity) is not int or quantity < 1:
@@ -397,6 +442,8 @@ class GameState:
         return self.job is not None and self.remaining <= 0
 
     def craft_status(self, equipment):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if equipment not in RECIPES:
             return False, "제작할 수 없는 장비입니다."
         if self.job is not None:
@@ -420,10 +467,13 @@ class GameState:
         return True, "제작을 시작했습니다. 완성 후 회수하세요."
 
     def collect(self):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
         if self.job is None:
             return False, "회수할 완성품이 없습니다."
         if not self.ready_to_collect:
             return False, "아직 제작 중입니다."
         self.add_equipment(self.job.equipment, 1)
+        self.collected_equipment_count += 1
         self.job = None
         return True, "완성된 장비 1개를 회수했습니다."

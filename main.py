@@ -99,9 +99,13 @@ class Game:
                 self.enhancement_panel.reset()
 
     def handle_events(self, events):
+        self.state.finish_session()
         for event in events:
             if event.type == sdl2.SDL_QUIT:
                 self.running = False
+            elif self.state.result is not None:
+                if event.type == sdl2.SDL_KEYDOWN and event.key == sdl2.SDLK_ESCAPE:
+                    self.running = False
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key == sdl2.SDLK_F10:
                     self.state.apply_cheat()
@@ -213,6 +217,8 @@ class Game:
         self.text((left + right - text_width.value) / 2, (bottom + top) / 2 + 1, label, 18, INK)
 
     def update(self, dt):
+        if self.state.finish_session() is not None:
+            return
         self.state.update_rentals()
         previous_order = self.state.current_order
         self.state.update_customers()
