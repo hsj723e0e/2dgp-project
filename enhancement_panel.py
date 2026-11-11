@@ -3,8 +3,8 @@
 import sdl2
 
 from customer_board import contains
-from game_state import MAX_ENHANCEMENT, basic_upgrade_cost, rental_success_probability
-from ui import CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge
+from game_state import MAX_ENHANCEMENT, PERSONAL_CORE_COST, basic_upgrade_cost, rental_success_probability
+from ui import CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, PERSONAL_EQUIPMENT, WIDTH, HEIGHT
 
 
@@ -91,6 +91,8 @@ class EnhancementPanel:
     def perform_action(self):
         if self.mode == "basic" and self.selected_unit:
             self.game.feedback_success, self.game.feedback = self.game.state.enhance_basic(self.entry.image, self.selected_unit.identifier)
+        elif self.mode == "personal":
+            self.game.feedback_success, self.game.feedback = self.game.state.craft_personal(self.entry.image)
 
     def draw_basic(self):
         game, state = self.game, self.game.state
@@ -114,6 +116,21 @@ class EnhancementPanel:
         if reason and not game.feedback:
             game.text(278, 191, reason, 15, GOLD)
 
+    def draw_personal(self):
+        game, state = self.game, self.game.state
+        level = state.personal_equipment[self.entry.image]
+        if level is None:
+            game.text(654, 295, "고출력 코어", 15, MUTED)
+            quantity_pair(game, 785, 279, state.rewards["item_core"], PERSONAL_CORE_COST)
+            game.text(654, 244, "최초 제작 단계 +0", 18, MUTED)
+            available, reason = state.personal_craft_status(self.entry.image)
+            game.draw_button(ACTION, "최상급 장비 제작", available)
+            if reason and not game.feedback:
+                game.text(654, 191, reason, 15, GOLD)
+        else:
+            quantity_badge(game, 654, 279, f"+{level}", "현재", CYAN, 160)
+            game.draw_button(ACTION, "제작 완료", False)
+
     def draw(self):
         game, state = self.game, self.game.state
         fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
@@ -134,10 +151,18 @@ class EnhancementPanel:
                 quantity_badge(game, 536, row_y - 16, state.equipment[entry.image], width=64)
             elif self.mode == "materials":
                 quantity_badge(game, 536, row_y - 16, state.rewards[entry.image], width=64)
+            elif self.mode == "personal":
+                level = state.personal_equipment[entry.image]
+                if level is None:
+                    game.text(538, row_y, "미보유", 15, MUTED)
+                else:
+                    quantity_badge(game, 536, row_y - 16, f"+{level}", color=CYAN, width=64)
         game.icons[self.entry.image].draw(816, 428, 144, 144)
         game.text(654, 329, self.entry.name, 22)
         if self.mode == "basic":
             self.draw_basic()
+        elif self.mode == "personal":
+            self.draw_personal()
         else:
             for index, line in enumerate(self.entry.description.split(" · ")):
                 game.text(654, 300 - index * 22, line, 15, MUTED)
