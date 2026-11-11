@@ -9,6 +9,7 @@ from pico2d import pico2d as p2
 import sdl2
 
 from customer_board import CustomerBoard
+from enhancement_panel import EnhancementPanel
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
 from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
@@ -66,6 +67,7 @@ class Game:
         self.feedback = ""
         self.feedback_success = True
         self.customer_board = CustomerBoard(self)
+        self.enhancement_panel = EnhancementPanel(self)
 
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
@@ -92,6 +94,8 @@ class Game:
             self.player.walk_time = 0.0
             if self.active_station.name == "주문 게시판":
                 self.customer_board.reset()
+            elif self.active_station.name == "강화 장치":
+                self.enhancement_panel.reset()
 
     def handle_events(self, events):
         for event in events:
@@ -115,6 +119,8 @@ class Game:
                     self.interact()
                 elif self.active_station and self.active_station.name == "주문 게시판":
                     self.customer_board.handle_key(event.key)
+                elif self.active_station and self.active_station.name == "강화 장치":
+                    self.enhancement_panel.handle_key(event.key)
                 elif self.active_station:
                     if event.key in (sdl2.SDLK_UP, sdl2.SDLK_w):
                         self.select_entry(self.selected_entry - 1)
@@ -137,6 +143,9 @@ class Game:
             return
         if self.active_station.name == "주문 게시판":
             self.customer_board.handle_click(x, y)
+            return
+        if self.active_station.name == "강화 장치":
+            self.enhancement_panel.handle_click(x, y)
             return
         left, bottom, right, top = CLOSE_BUTTON
         if left <= x <= right and bottom <= y <= top:
@@ -191,10 +200,10 @@ class Game:
                 entry = self.active_station.entries[self.selected_entry]
                 self.feedback_success, self.feedback = self.state.start_craft(entry.image)
 
-    def draw_button(self, bounds, label, enabled=True):
+    def draw_button(self, bounds, label, enabled=True, selected=False):
         left, bottom, right, top = bounds
         hovered = left <= self.mouse[0] <= right and bottom <= self.mouse[1] <= top
-        image = self.button_hover if hovered else self.button
+        image = self.button_hover if hovered or selected else self.button
         if not enabled:
             image = self.button_disabled
         image.draw((left + right) / 2, (bottom + top) / 2, right - left, top - bottom)
@@ -241,6 +250,9 @@ class Game:
         station = self.active_station
         if station.name == "주문 게시판":
             self.customer_board.draw()
+            return
+        if station.name == "강화 장치":
+            self.enhancement_panel.draw()
             return
         fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
         self.draw_panel_frame()
@@ -370,6 +382,8 @@ class Game:
                 controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
                 if self.customer_board.unit_action:
                     controls = "↑ ↓ 요청 선택   ← → 장비 선택   SPACE 확정   ESC 취소"
+            elif self.active_station.name == "강화 장치":
+                controls = "TAB 분류 전환   ↑ ↓ 종류   ← → 보유 장비   SPACE 강화   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
