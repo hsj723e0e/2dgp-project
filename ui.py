@@ -18,3 +18,13 @@ def fill_rect(x, y, width, height, color, alpha=255):
     sdl2.SDL_SetRenderDrawColor(p2.renderer, *color, alpha)
     rectangle = p2.to_sdl_rect(x, y, width, height)
     sdl2.SDL_RenderFillRect(p2.renderer, ctypes.byref(rectangle))
+
+
+def quantity_badge(game, x, y, value, label="", color=GOLD, width=100):
+    fill_rect(x, y, width, 32, (28, 47, 64))
+    fill_rect(x, y, 3, 32, color)
+    value_x = x + 10
+    if label:
+        game.text(x + 10, y + 16, label, 15, MUTED)
+        value_x = x + 46
+    game.text(value_x, y + 16, str(value), 22, color)

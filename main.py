@@ -11,7 +11,7 @@ import sdl2
 from customer_board import CustomerBoard
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect
+from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
@@ -274,12 +274,13 @@ class Game:
         if station.name == "재료 보관대":
             price = MATERIAL_PRICES[entry.image]
             owned = self.state.materials[entry.image]
-            self.text(654, 255, f"단가 {price} 코인 · 보유 {owned}개", 18, GOLD)
+            quantity_badge(self, 654, 239, owned, "보유", CYAN, 144)
+            self.text(818, 255, f"단가 {price} 코인", 18, GOLD)
             fill_rect(708, 215, 40, 28, (40, 68, 83))
             fill_rect(908, 215, 40, 28, (40, 68, 83))
             self.text(722, 229, "-")
             self.text(921, 229, "+")
-            self.text(764, 229, f"수량 {self.purchase_quantity}개", 18)
+            quantity_badge(self, 759, 208, self.purchase_quantity, "구매", GOLD, 138)
         elif station.name == "작업대":
             self.text(654, 255, f"제작 시간 {RECIPES[entry.image].seconds}초", 18, GOLD)
             if self.state.job is not None:
