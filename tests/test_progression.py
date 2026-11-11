@@ -40,3 +40,25 @@ class EquipmentUnitTests(unittest.TestCase):
             self.assertFalse(self.state.sell_order(32, identifiers)[0])
             self.assertEqual(self.state.equipment["eq_drill_01"], 2)
             self.assertEqual(self.state.coins, 100)
+
+    def test_upgrade_charges_coins_and_changes_only_selected_unit(self):
+        self.state.equipment["eq_drill_01"] = 2
+        first, second = self.state.available_units("eq_drill_01")
+        self.assertTrue(self.state.enhance_basic("eq_drill_01", second.identifier)[0])
+        self.assertEqual(self.state.coins, 92)
+        self.assertEqual((first.level, second.level), (0, 1))
+        self.assertTrue(self.state.enhance_basic("eq_drill_01", second.identifier)[0])
+        self.assertEqual(self.state.coins, 76)
+        self.assertEqual(second.level, 2)
+
+    def test_upgrade_rejects_missing_unit_low_funds_and_max_level(self):
+        self.state.equipment["eq_drill_01"] = 1
+        unit = self.state.available_units("eq_drill_01")[0]
+        self.state.coins = 0
+        self.assertFalse(self.state.enhance_basic("eq_drill_01", unit.identifier)[0])
+        self.assertEqual(unit.level, 0)
+        self.state.coins = 999
+        unit.level = 13
+        self.assertFalse(self.state.enhance_basic("eq_drill_01", unit.identifier)[0])
+        self.assertFalse(self.state.enhance_basic("eq_drill_01", 9999)[0])
+        self.assertEqual(self.state.coins, 999)

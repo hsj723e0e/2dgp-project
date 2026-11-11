@@ -14,6 +14,7 @@ from workshop import EQUIPMENT
 
 MATERIAL_PRICES = {"mat_01": 8, "mat_02": 12, "mat_03": 4}
 CUSTOMER_INTERVAL = 8
+MAX_ENHANCEMENT = 13
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,11 @@ class EquipmentUnit:
     identifier: int
     equipment: str
     level: int = 0
+
+
+def basic_upgrade_cost(unit):
+    base_cost = 8 if unit.equipment.endswith("_01") else 12
+    return base_cost * (unit.level + 1)
 
 
 class GameState:
@@ -115,6 +121,27 @@ class GameState:
             self.available_units(unit.equipment)
             self.equipment_units[unit.equipment].append(unit)
             self.equipment[unit.equipment] += 1
+
+    def basic_upgrade_status(self, equipment, unit_id):
+        if equipment not in self.equipment:
+            return False, "강화할 수 없는 장비입니다."
+        unit = next((item for item in self.available_units(equipment) if item.identifier == unit_id), None)
+        if unit is None:
+            return False, "강화할 보유 장비를 선택하세요."
+        if unit.level >= MAX_ENHANCEMENT:
+            return False, "최대 강화 단계입니다."
+        if self.coins < basic_upgrade_cost(unit):
+            return False, "코인이 부족합니다."
+        return True, ""
+
+    def enhance_basic(self, equipment, unit_id):
+        available, reason = self.basic_upgrade_status(equipment, unit_id)
+        if not available:
+            return False, reason
+        unit = next(item for item in self.available_units(equipment) if item.identifier == unit_id)
+        self.coins -= basic_upgrade_cost(unit)
+        unit.level += 1
+        return True, f"선택한 장비를 +{unit.level}로 강화했습니다."
 
     @property
     def next_customer_in(self):
