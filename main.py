@@ -3,6 +3,7 @@
 import ctypes
 import os
 from pathlib import Path
+from math import ceil
 from time import perf_counter
 
 from pico2d import pico2d as p2
@@ -12,7 +13,7 @@ from customer_board import CustomerBoard
 from enhancement_panel import EnhancementPanel
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
+from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
@@ -343,6 +344,13 @@ class Game:
         fill_rect(1066, 680, 3, 10, (156, 100, 41))
         self.text(1091, 686, f"{self.state.coins} 코인", 22, GOLD)
 
+    def draw_session_timer(self):
+        remaining = ceil(self.state.session_remaining)
+        minutes, seconds = divmod(remaining, 60)
+        color = RED if remaining <= 60 else CREAM
+        fill_rect(18, 628, 282, 29, INK, 240)
+        self.text(34, 643, f"남은 시간 {minutes:02d}:{seconds:02d}", 18, color)
+
     def draw_panel_frame(self):
         # Nine-slice drawing keeps the original pixel border and screws intact.
         margin = 48
@@ -396,6 +404,7 @@ class Game:
             self.draw_panel()
         self.draw_crafting_status()
         self.draw_coin_counter()
+        self.draw_session_timer()
         if self.state.rentals:
             active = sum(contract.status == "active" for contract in self.state.rentals)
             completed = len(self.state.rentals) - active
