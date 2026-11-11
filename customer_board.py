@@ -3,7 +3,7 @@
 import sdl2
 
 from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, RENTAL_SUCCESS_RATE, REWARD_NAMES
-from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect
+from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, HEIGHT, WIDTH
 
 
@@ -109,16 +109,20 @@ class CustomerBoard:
             game.text(278, 534, "다음 손님을 기다리고 있습니다.", 18, MUTED)
             game.text(340, 380, f"다음 방문까지 {state.next_customer_in:.1f}초", 22, GOLD)
         else:
-            game.text(278, 534, f"{CUSTOMER_NAMES[order.customer]}의 주문 · 총 {order.quantity}개", 18, MUTED)
+            game.text(278, 534, f"{CUSTOMER_NAMES[order.customer]}의 주문", 18, MUTED)
+            if order.customer != "npc_broker":
+                quantity_badge(game, 610, 518, order.quantity, "총", GOLD)
             game.icons[order.customer].draw(870, 430, 152, 152)
             game.text(766, 329, CUSTOMER_NAMES[order.customer], 22)
             for index, (equipment, quantity) in enumerate(order.requirements):
                 y = 470 - index * 60
                 owned = state.equipment[equipment]
                 fill_rect(275, y - 26, 440, 52, (20, 40, 56))
+                if owned < quantity:
+                    fill_rect(275, y - 26, 3, 52, RED)
                 game.icons[equipment].draw(305, y, 42, 42)
-                game.text(339, y + 7, EQUIPMENT_NAMES[equipment], 18)
-                game.text(339, y - 14, f"요청 {quantity}개 / 보유 {owned}개", 15, CYAN if owned >= quantity else GOLD)
+                game.text(339, y, EQUIPMENT_NAMES[equipment], 18)
+                quantity_pair(game, 495, y - 16, owned, quantity, "요구")
             if order.customer == "npc_broker":
                 game.text(278, 465, "코인을 받고 다음 시장 사건을 알려드립니다.", 18)
                 game.text(278, 425, f"정보 가격 {INFORMATION_PRICE} 코인", 22, GOLD)
