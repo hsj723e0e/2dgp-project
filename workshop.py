@@ -60,6 +60,14 @@ CUSTOMERS = (
     Entry("정보상", "npc_broker", "공방의 시장 사건 정보를 제공하는 손님"),
 )
 
+PERSONAL_EQUIPMENT = (
+    Entry("플라스마 드릴", "eq_drill_03", "최상급 드릴 · 고출력 코어 12개로 제작"),
+    Entry("첨단 탐사복", "eq_suit_03", "최상급 우주복 · 고출력 코어 12개로 제작"),
+    Entry("자급형 생명유지장치", "eq_oxygen_03", "최상급 산소 장치 · 고출력 코어 12개로 제작"),
+    Entry("정밀제어칩", "item_chip", "개인 장비 강화 시 3개 사용"),
+    Entry("고출력 코어", "item_core", "최상급 장비 제작 시 12개 사용"),
+)
+
 
 STATIONS = (
     Station("작업대", 290, 345,
@@ -70,6 +78,8 @@ STATIONS = (
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,
             "공방에서 취급하는 장비를 살펴보세요.", EQUIPMENT),
+    Station("강화 장치", 1005, 225,
+            "나만의 최상급 장비와 성장 재료를 확인하세요.", PERSONAL_EQUIPMENT),
 )
 
 
