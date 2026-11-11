@@ -52,12 +52,22 @@ MATERIALS = (
     Entry("전자회로", "mat_03", "기본 재료 3 · 초급·중급 장비의 공통 재료"),
 )
 
+CUSTOMERS = (
+    Entry("초보 작업자", "npc_novice", "대여 성공 보상 · 정밀제어칩"),
+    Entry("전문 탐사원", "npc_expert", "대여 성공 보상 · 고출력 코어"),
+    Entry("우주 관광객", "npc_tourist", "판매·대여 보상 · 골드"),
+    Entry("수상한 손님", "npc_mysterious", "대여 성공 보상 · 미확인 아이템"),
+    Entry("정보상", "npc_broker", "공방의 시장 사건 정보를 제공하는 손님"),
+)
+
 
 STATIONS = (
     Station("작업대", 290, 345,
             "제작 가능한 초급·중급 장비와 재료를 살펴보세요.", EQUIPMENT),
     Station("재료 보관대", 255, 230,
             "장비 제작에 사용하는 기본 재료 3종입니다.", MATERIALS),
+    Station("주문 게시판", 640, 360,
+            "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
 )
 
 
