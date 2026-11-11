@@ -100,8 +100,12 @@ class Game:
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key == sdl2.SDLK_F10:
                     self.state.apply_cheat()
+                    self.customer_board.cancel_selection()
                     self.feedback = "F10 치트 적용"
                     self.feedback_success = True
+                elif (self.active_station and self.active_station.name == "주문 게시판"
+                      and self.customer_board.unit_action and event.key in (sdl2.SDLK_RETURN, sdl2.SDLK_ESCAPE)):
+                    self.customer_board.handle_key(event.key)
                 elif event.key == sdl2.SDLK_ESCAPE:
                     if self.active_station:
                         self.close_panel()
@@ -364,6 +368,8 @@ class Game:
                 controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
                 controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
+                if self.customer_board.unit_action:
+                    controls = "↑ ↓ 요청 선택   ← → 장비 선택   SPACE 확정   ESC 취소"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
