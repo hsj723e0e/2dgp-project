@@ -28,3 +28,9 @@ def quantity_badge(game, x, y, value, label="", color=GOLD, width=100):
         game.text(x + 10, y + 16, label, 15, MUTED)
         value_x = x + 46
     game.text(value_x, y + 16, str(value), 22, color)
+
+
+def quantity_pair(game, x, y, owned, required, required_label="필요"):
+    color = CYAN if owned >= required else RED
+    quantity_badge(game, x, y, owned, "보유", color)
+    quantity_badge(game, x + 110, y, required, required_label, GOLD)

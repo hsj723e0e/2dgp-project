@@ -11,7 +11,7 @@ import sdl2
 from customer_board import CustomerBoard
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge
+from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
@@ -265,16 +265,17 @@ class Game:
         if station.name == "작업대":
             recipe = RECIPES[entry.image]
             material_names = {material.image: material.name for material in MATERIALS}
-            lines = [
-                f"{material_names[name]} {quantity}개 / 보유 {self.state.materials[name]}개"
-                for name, quantity in recipe.ingredients.items()
-            ]
+            for index, (name, quantity) in enumerate(recipe.ingredients.items()):
+                y = 279 - index * 38
+                self.text(654, y + 16, material_names[name], 15, MUTED)
+                quantity_pair(self, 785, y, self.state.materials[name], quantity)
+            lines = []
         for index, line in enumerate(lines):
             self.text(654, 300 - index * 22, line, 15, MUTED)
         if station.name == "재료 보관대":
             price = MATERIAL_PRICES[entry.image]
             owned = self.state.materials[entry.image]
-            quantity_badge(self, 654, 239, owned, "보유", CYAN, 144)
+            quantity_badge(self, 654, 244, owned, "보유", CYAN, 144)
             self.text(818, 255, f"단가 {price} 코인", 18, GOLD)
             fill_rect(708, 215, 40, 28, (40, 68, 83))
             fill_rect(908, 215, 40, 28, (40, 68, 83))
@@ -282,12 +283,11 @@ class Game:
             self.text(921, 229, "+")
             quantity_badge(self, 759, 208, self.purchase_quantity, "구매", GOLD, 138)
         elif station.name == "작업대":
-            self.text(654, 255, f"제작 시간 {RECIPES[entry.image].seconds}초", 18, GOLD)
+            self.text(654, 220, f"제작 시간 {RECIPES[entry.image].seconds}초", 18, GOLD)
             if self.state.job is not None:
                 equipment_name = next(item.name for item in EQUIPMENT if item.image == self.state.job.equipment)
-                self.text(654, 230, equipment_name, 18, CYAN)
                 status = "완성 · 회수 가능" if self.state.ready_to_collect else f"남은 시간 {self.state.remaining:.1f}초"
-                self.text(654, 208, status, 15, GOLD)
+                self.text(654, 196, f"{equipment_name} · {status}", 15, GOLD)
         elif station.name == "장비 진열대":
             self.text(654, 255, f"보유 수량 {self.state.equipment[entry.image]}개", 22, CYAN)
             rented = sum(dict(contract.order.requirements).get(entry.image, 0)
