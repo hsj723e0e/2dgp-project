@@ -108,11 +108,14 @@ class EnhancementPanel:
             game.draw_button(ACTION, "장비 강화", False)
             return
         quantity_badge(game, 654, 279, f"+{unit.level}", "현재", CYAN, 144)
-        quantity_badge(game, 850, 279, f"+{min(MAX_ENHANCEMENT, unit.level + 1)}", "다음", GOLD, 144)
-        game.text(654, 260, f"강화 비용 {basic_upgrade_cost(unit)} 코인", 18, GOLD)
+        maximum = unit.level == MAX_ENHANCEMENT
+        quantity_badge(game, 850, 279, f"+{min(MAX_ENHANCEMENT, unit.level + 1)}", "최대" if maximum else "다음", GOLD, 144)
+        cost_label = "최대 강화 +13" if maximum else f"강화 비용 {basic_upgrade_cost(unit)} 코인"
+        game.text(654, 260, cost_label, 18, GOLD)
         current = rental_success_probability((unit,))
         following = min(.98, current + .01)
-        game.text(654, 234, f"대여 성공률 {current:.0%} → {following:.0%}", 18, CYAN)
+        chance_label = f"대여 성공률 {current:.0%} (최대)" if maximum else f"대여 성공률 {current:.0%} → {following:.0%}"
+        game.text(654, 234, chance_label, 18, CYAN)
         units = state.available_units(self.entry.image)
         game.draw_button(PREVIOUS_UNIT, "←")
         game.draw_button(NEXT_UNIT, "→")
@@ -136,12 +139,17 @@ class EnhancementPanel:
         else:
             following = min(MAX_ENHANCEMENT, level + 1)
             quantity_badge(game, 654, 279, f"+{level}", "현재", CYAN, 144)
-            quantity_badge(game, 850, 279, f"+{following}", "다음", GOLD, 144)
-            game.text(654, 257, "정밀제어칩", 15, MUTED)
-            quantity_pair(game, 785, 241, state.rewards["item_chip"], PERSONAL_CHIP_COST)
+            maximum = level == MAX_ENHANCEMENT
+            quantity_badge(game, 850, 279, f"+{following}", "최대" if maximum else "다음", GOLD, 144)
+            if maximum:
+                game.text(654, 257, "최대 강화 단계 도달", 18, GOLD)
+            else:
+                game.text(654, 257, "정밀제어칩", 15, MUTED)
+                quantity_pair(game, 785, 241, state.rewards["item_chip"], PERSONAL_CHIP_COST)
             performance = state.personal_performance(self.entry.image)
             next_performance = 100 + following * 10
-            game.text(654, 220, f"성능 {performance}% → {next_performance}%", 18, CYAN)
+            performance_label = f"최종 성능 {performance}%" if maximum else f"성능 {performance}% → {next_performance}%"
+            game.text(654, 220, performance_label, 18, CYAN)
             available, reason = state.personal_upgrade_status(self.entry.image)
             label = "최대 강화 +13" if level == MAX_ENHANCEMENT else "개인 장비 강화"
             game.draw_button(ACTION, label, available)

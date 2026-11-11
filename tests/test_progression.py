@@ -122,3 +122,55 @@ class PersonalEquipmentTests(unittest.TestCase):
         self.assertFalse(state.enhance_personal(PERSONAL_IDS[0])[0])
         self.assertEqual(state.personal_equipment[PERSONAL_IDS[0]], 0)
         self.assertEqual(state.coins, 999)
+
+    def test_personal_equipment_cannot_be_sold_or_rented(self):
+        state = GameState()
+        state.personal_equipment[PERSONAL_IDS[0]] = 4
+        state.current_order = Order(91, "npc_novice", ((PERSONAL_IDS[0], 1),))
+        self.assertFalse(state.sell_order(91)[0])
+        self.assertFalse(state.start_rental(91)[0])
+        self.assertEqual(state.personal_equipment[PERSONAL_IDS[0]], 4)
+        self.assertEqual(state.coins, 100)
+
+
+class FullProgressionTests(unittest.TestCase):
+    def test_starting_coins_to_sales_core_rentals_and_personal_upgrade(self):
+        now = [0.0]
+        state = GameState(clock=lambda: now[0], rng=random.Random(5))
+        state.rng.random = lambda: 0
+
+        def craft(equipment):
+            from game_state import RECIPES
+            recipe = RECIPES[equipment]
+            for material, quantity in recipe.ingredients.items():
+                needed = max(0, quantity - state.materials[material])
+                if needed:
+                    self.assertTrue(state.purchase(material, needed)[0])
+            self.assertTrue(state.start_craft(equipment)[0])
+            now[0] += recipe.seconds
+            self.assertTrue(state.collect()[0])
+
+        craft("eq_drill_01")
+        state.current_order = Order(100, "npc_novice", (("eq_drill_01", 1),))
+        self.assertTrue(state.sell_order(100)[0])
+        craft("eq_drill_02")
+        craft("eq_drill_02")
+        medium = state.available_units("eq_drill_02")
+        self.assertTrue(state.enhance_basic("eq_drill_02", medium[0].identifier)[0])
+        for identifier in range(101, 107):
+            state.current_order = Order(identifier, "npc_expert", (("eq_drill_02", 2),))
+            self.assertTrue(state.start_rental(identifier, tuple(unit.identifier for unit in medium))[0])
+            self.assertAlmostEqual(state.rentals[-1].success_probability, .855)
+            now[0] += 30
+            state.update_rentals()
+        self.assertEqual(state.rewards["item_core"], 12)
+        self.assertTrue(state.craft_personal(PERSONAL_IDS[0])[0])
+        craft("eq_drill_01")
+        for identifier in range(107, 110):
+            state.current_order = Order(identifier, "npc_novice", (("eq_drill_01", 1),))
+            self.assertTrue(state.start_rental(identifier)[0])
+            now[0] += 25
+            state.update_rentals()
+        self.assertTrue(state.enhance_personal(PERSONAL_IDS[0])[0])
+        self.assertEqual(state.personal_equipment[PERSONAL_IDS[0]], 1)
+        self.assertGreater(state.session_remaining, 0)

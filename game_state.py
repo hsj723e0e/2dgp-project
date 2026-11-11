@@ -316,6 +316,8 @@ class GameState:
             return False, "이미 처리된 주문입니다."
         if order.customer == "npc_broker":
             return False, "정보상에게는 코인으로 정보를 구매하세요."
+        if any(name not in self.equipment for name, _ in order.requirements):
+            return False, "거래할 수 없는 장비가 포함되어 있습니다."
         if any(self.equipment[name] < quantity for name, quantity in order.requirements):
             return False, "장비 재고가 부족합니다."
         if unit_ids is not None:

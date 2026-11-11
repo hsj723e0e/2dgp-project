@@ -2,9 +2,9 @@
 
 import sdl2
 
-from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, RENTAL_SUCCESS_RATE, REWARD_NAMES
+from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, REWARD_NAMES
 from game_state import rental_success_probability
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
+from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, HEIGHT, WIDTH
 
 
