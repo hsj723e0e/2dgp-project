@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from collections import Counter
+from math import isfinite
 import random
 from time import monotonic
 
@@ -18,6 +19,7 @@ MAX_ENHANCEMENT = 13
 PERSONAL_CORE_COST = 12
 PERSONAL_CHIP_COST = 3
 PERSONAL_IDS = tuple(entry.image for entry in PERSONAL_EQUIPMENT[:3])
+SESSION_DURATION = 20 * 60
 
 
 @dataclass(frozen=True)
@@ -60,7 +62,9 @@ def rental_success_probability(units):
 
 
 class GameState:
-    def __init__(self, clock=monotonic, rng=None):
+    def __init__(self, clock=monotonic, rng=None, session_duration=SESSION_DURATION):
+        if not isfinite(session_duration) or session_duration <= 0:
+            raise ValueError("Session duration must be a positive finite number")
         self.coins = 100
         self.materials = {name: 0 for name in MATERIAL_PRICES}
         self.equipment = {entry.image: 0 for entry in EQUIPMENT}
@@ -70,6 +74,7 @@ class GameState:
         self.clock = clock
         self.rng = rng if rng is not None else random.Random()
         self.session_started_at = self.clock()
+        self.session_end_at = self.session_started_at + session_duration
         self.market_tip = None
         self.market_tip_period = None
         self.rewards = {"item_chip": 0, "item_core": 0, "item_secret": 0}
@@ -78,6 +83,18 @@ class GameState:
         self.current_order = create_order(1, "npc_novice", self.rng)
         self.next_order_id = 2
         self.next_customer_at = None
+
+    @property
+    def session_remaining(self):
+        return max(0.0, self.session_end_at - self.clock())
+
+    @property
+    def session_over(self):
+        return self.clock() >= self.session_end_at
+
+    @property
+    def effective_time(self):
+        return min(self.clock(), self.session_end_at)
 
     def apply_cheat(self):
         self.coins = 999
@@ -197,6 +214,8 @@ class GameState:
         return max(0.0, self.next_customer_at - self.clock())
 
     def update_customers(self):
+        if self.session_over:
+            return
         if self.current_order is not None or self.next_customer_at is None:
             return
         if self.clock() < self.next_customer_at:
@@ -219,7 +238,7 @@ class GameState:
 
     @property
     def market_period(self):
-        return int(max(0, self.clock() - self.session_started_at) // MARKET_INTERVAL)
+        return int(max(0, self.effective_time - self.session_started_at) // MARKET_INTERVAL)
 
     @property
     def market_event(self):
@@ -232,7 +251,7 @@ class GameState:
 
     @property
     def market_remaining(self):
-        elapsed = max(0, self.clock() - self.session_started_at)
+        elapsed = max(0, self.effective_time - self.session_started_at)
         return MARKET_INTERVAL - elapsed % MARKET_INTERVAL
 
     @property
@@ -331,7 +350,7 @@ class GameState:
         return True, "대여를 시작했습니다. 대여 현황에서 결과를 확인하세요."
 
     def update_rentals(self):
-        now = self.clock()
+        now = self.effective_time
         for contract in self.rentals:
             if contract.status != "active" or now < contract.due_at:
                 continue
