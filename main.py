@@ -8,12 +8,14 @@ from time import perf_counter
 from pico2d import pico2d as p2
 import sdl2
 
+from game_state import GameState, MATERIAL_PRICES
 from player import Player
 from workshop import HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
-CLOSE_BUTTON = (708, 116, 948, 180)
+CLOSE_BUTTON = (280, 116, 520, 180)
+ACTION_BUTTON = (708, 116, 948, 180)
 INK = (15, 28, 43)
 CREAM = (241, 229, 198)
 MUTED = (169, 188, 195)
@@ -53,20 +55,31 @@ class Game:
         self.panel_image = p2.load_image(str(ASSETS / "ui_order_panel.png"))
         self.button = p2.load_image(str(ASSETS / "ui_button.png"))
         self.button_hover = p2.load_image(str(ASSETS / "ui_button_selected.png"))
+        self.button_disabled = p2.load_image(str(ASSETS / "ui_button_disabled.png"))
         image_names = {entry.image for station in STATIONS for entry in station.entries}
         self.icons = {name: p2.load_image(str(ASSETS / f"{name}.png")) for name in image_names}
         self.fonts = load_fonts()
         self.player = Player()
+        self.state = GameState()
         self.running = True
         self.active_station = None
         self.selected_entry = 0
         self.mouse = (0, 0)
+        self.purchase_quantity = 1
+        self.feedback = ""
+        self.feedback_success = True
 
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
 
     def close_panel(self):
         self.active_station = None
+        self.feedback = ""
+
+    def select_entry(self, index):
+        self.selected_entry = index % len(self.active_station.entries)
+        self.purchase_quantity = 1
+        self.feedback = ""
 
     def interact(self):
         if self.active_station:
@@ -74,6 +87,8 @@ class Game:
             return
         self.active_station = nearest_station(self.player)
         self.selected_entry = 0
+        self.purchase_quantity = 1
+        self.feedback = ""
         if self.active_station:
             self.player.moving = False
             self.player.walk_time = 0.0
@@ -92,9 +107,15 @@ class Game:
                     self.interact()
                 elif self.active_station:
                     if event.key in (sdl2.SDLK_UP, sdl2.SDLK_w):
-                        self.selected_entry = (self.selected_entry - 1) % len(self.active_station.entries)
+                        self.select_entry(self.selected_entry - 1)
                     elif event.key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
-                        self.selected_entry = (self.selected_entry + 1) % len(self.active_station.entries)
+                        self.select_entry(self.selected_entry + 1)
+                    elif event.key == sdl2.SDLK_LEFT:
+                        self.change_quantity(-1)
+                    elif event.key == sdl2.SDLK_RIGHT:
+                        self.change_quantity(1)
+                    elif event.key == sdl2.SDLK_SPACE:
+                        self.perform_action()
             elif event.type == sdl2.SDL_MOUSEMOTION:
                 self.mouse = (event.x, HEIGHT - event.y)
             elif event.type == sdl2.SDL_MOUSEBUTTONDOWN and event.button == sdl2.SDL_BUTTON_LEFT:
@@ -107,12 +128,52 @@ class Game:
         left, bottom, right, top = CLOSE_BUTTON
         if left <= x <= right and bottom <= y <= top:
             self.close_panel()
+        elif ACTION_BUTTON[0] <= x <= ACTION_BUTTON[2] and ACTION_BUTTON[1] <= y <= ACTION_BUTTON[3]:
+            self.perform_action()
+        elif 708 <= x <= 748 and 215 <= y <= 243:
+            self.change_quantity(-1)
+        elif 908 <= x <= 948 and 215 <= y <= 243:
+            self.change_quantity(1)
         elif 275 <= x <= 610:
             for index in range(len(self.active_station.entries)):
-                row_y = 478 - index * 56
+                row_y = 478 - index * 52
                 if row_y - 24 <= y <= row_y + 24:
-                    self.selected_entry = index
+                    self.select_entry(index)
                     break
+
+    def change_quantity(self, amount):
+        if self.active_station.name != "재료 보관대":
+            return
+        entry = self.active_station.entries[self.selected_entry]
+        maximum = max(1, self.state.coins // MATERIAL_PRICES[entry.image])
+        self.purchase_quantity = max(1, min(maximum, self.purchase_quantity + amount))
+        self.feedback = ""
+
+    def panel_action(self):
+        if self.active_station.name == "재료 보관대":
+            entry = self.active_station.entries[self.selected_entry]
+            available, reason = self.state.purchase_status(entry.image, self.purchase_quantity)
+            cost = MATERIAL_PRICES[entry.image] * self.purchase_quantity
+            return f"{cost} 코인 구매", available, reason
+        return None
+
+    def perform_action(self):
+        if self.active_station.name == "재료 보관대":
+            entry = self.active_station.entries[self.selected_entry]
+            self.feedback_success, self.feedback = self.state.purchase(entry.image, self.purchase_quantity)
+            if self.feedback_success:
+                self.purchase_quantity = 1
+
+    def draw_button(self, bounds, label, enabled=True):
+        left, bottom, right, top = bounds
+        hovered = left <= self.mouse[0] <= right and bottom <= self.mouse[1] <= top
+        image = self.button_hover if hovered else self.button
+        if not enabled:
+            image = self.button_disabled
+        image.draw((left + right) / 2, (bottom + top) / 2, right - left, top - bottom)
+        text_width, text_height = ctypes.c_int(), ctypes.c_int()
+        sdl2.sdlttf.TTF_SizeUTF8(self.fonts[18].font, label.encode("utf-8"), ctypes.byref(text_width), ctypes.byref(text_height))
+        self.text((left + right - text_width.value) / 2, (bottom + top) / 2 + 1, label, 18, INK)
 
     def update(self, dt):
         if self.active_station:
@@ -151,7 +212,7 @@ class Game:
         self.text(278, 534, station.subtitle, 18, MUTED)
         fill_rect(275, 510, 730, 2, (61, 87, 103))
         for index, entry in enumerate(station.entries):
-            row_y = 478 - index * 56
+            row_y = 478 - index * 52
             selected = index == self.selected_entry
             fill_rect(275, row_y - 24, 335, 48, (40, 68, 83) if selected else (20, 40, 56))
             if selected:
@@ -160,18 +221,38 @@ class Game:
             self.text(339, row_y, entry.name, 18, CYAN if selected else CREAM)
 
         entry = station.entries[self.selected_entry]
-        self.icons[entry.image].draw(816, 395, 176, 176)
-        self.text(654, 275, entry.name, 22)
+        self.icons[entry.image].draw(816, 428, 144, 144)
+        self.text(654, 329, entry.name, 22)
         # Recipe text is split at the separator to fit the detail column.
         lines = entry.description.split(" · ")
         for index, line in enumerate(lines):
-            self.text(654, 239 - index * 26, line, 15, MUTED)
-        self.text(278, 143, "↑ ↓ 항목 선택    E / ESC 닫기", 15, MUTED)
-        left, bottom, right, top = CLOSE_BUTTON
-        hovered = left <= self.mouse[0] <= right and bottom <= self.mouse[1] <= top
-        button = self.button_hover if hovered else self.button
-        button.draw(828, 148)
-        self.text(792, 149, "돌아가기", 18, INK)
+            self.text(654, 300 - index * 22, line, 15, MUTED)
+        if station.name == "재료 보관대":
+            price = MATERIAL_PRICES[entry.image]
+            owned = self.state.materials[entry.image]
+            self.text(654, 255, f"단가 {price} 코인 · 보유 {owned}개", 18, GOLD)
+            fill_rect(708, 215, 40, 28, (40, 68, 83))
+            fill_rect(908, 215, 40, 28, (40, 68, 83))
+            self.text(722, 229, "-")
+            self.text(921, 229, "+")
+            self.text(764, 229, f"수량 {self.purchase_quantity}개", 18)
+        self.draw_button(CLOSE_BUTTON, "돌아가기")
+        action = self.panel_action()
+        if action:
+            label, available, reason = action
+            self.draw_button(ACTION_BUTTON, label, available)
+            if reason and not self.feedback:
+                self.text(654, 191, reason, 15, GOLD)
+        if self.feedback:
+            self.text(654, 191, self.feedback, 15, CYAN if self.feedback_success else GOLD)
+
+    def draw_coin_counter(self):
+        fill_rect(1044, 665, 218, 39, INK, 240)
+        for offset in range(-9, 10):
+            half_width = int((100 - offset * offset) ** 0.5)
+            fill_rect(1068 - half_width, 685 + offset, 2 * half_width, 1, GOLD)
+        fill_rect(1066, 680, 3, 10, (156, 100, 41))
+        self.text(1091, 686, f"{self.state.coins} 코인", 22, GOLD)
 
     def draw_panel_frame(self):
         # Nine-slice drawing keeps the original pixel border and screws intact.
@@ -203,7 +284,10 @@ class Game:
         self.text(34, 686, "나만의 우주공방", 22)
         fill_rect(0, 0, WIDTH, 44, INK, 235)
         if self.active_station:
-            self.text(28, 23, "↑ ↓ / W S  항목 선택", 15, MUTED)
+            controls = "↑ ↓ / W S 선택   E / ESC 닫기"
+            if self.active_station.name == "재료 보관대":
+                controls = "↑ ↓ 선택   ← → 수량   SPACE 구매   E / ESC 닫기"
+            self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
             self.text(28, 23, "WASD / 방향키  이동", 15, MUTED)
@@ -213,6 +297,7 @@ class Game:
             self.text(483, 23, f"E / ENTER  {nearby.name} 이용", 18, GOLD)
         if self.active_station:
             self.draw_panel()
+        self.draw_coin_counter()
 
 
 def main():

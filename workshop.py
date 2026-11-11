@@ -1,4 +1,4 @@
-"""The workshop's stations, obstacles, and read-only station panels."""
+"""The workshop's stations, obstacles, and station catalogues."""
 
 from dataclasses import dataclass
 from math import hypot
@@ -73,7 +73,7 @@ STATIONS = (
     Station("작업대", 290, 345,
             "제작 가능한 초급·중급 장비와 재료를 살펴보세요.", EQUIPMENT),
     Station("재료 보관대", 255, 230,
-            "장비 제작에 사용하는 기본 재료 3종입니다.", MATERIALS),
+            "수량을 선택하고 코인으로 기본 재료를 구매하세요.", MATERIALS),
     Station("주문 게시판", 640, 360,
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,
