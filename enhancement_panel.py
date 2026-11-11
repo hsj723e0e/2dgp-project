@@ -3,7 +3,7 @@
 import sdl2
 
 from customer_board import contains
-from game_state import MAX_ENHANCEMENT, PERSONAL_CORE_COST, basic_upgrade_cost, rental_success_probability
+from game_state import MAX_ENHANCEMENT, PERSONAL_CHIP_COST, PERSONAL_CORE_COST, basic_upgrade_cost, rental_success_probability
 from ui import CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, PERSONAL_EQUIPMENT, WIDTH, HEIGHT
 
@@ -92,7 +92,13 @@ class EnhancementPanel:
         if self.mode == "basic" and self.selected_unit:
             self.game.feedback_success, self.game.feedback = self.game.state.enhance_basic(self.entry.image, self.selected_unit.identifier)
         elif self.mode == "personal":
-            self.game.feedback_success, self.game.feedback = self.game.state.craft_personal(self.entry.image)
+            state = self.game.state
+            action = state.craft_personal if state.personal_equipment[self.entry.image] is None else state.enhance_personal
+            self.game.feedback_success, self.game.feedback = action(self.entry.image)
+
+    def draw_note(self, message, color=GOLD):
+        fill_rect(280, 48, 720, 32, INK, 245)
+        self.game.text(296, 64, message, 15, color)
 
     def draw_basic(self):
         game, state = self.game, self.game.state
@@ -114,7 +120,7 @@ class EnhancementPanel:
         available, reason = state.basic_upgrade_status(self.entry.image, unit.identifier)
         game.draw_button(ACTION, "코인으로 강화", available)
         if reason and not game.feedback:
-            game.text(278, 191, reason, 15, GOLD)
+            self.draw_note(reason)
 
     def draw_personal(self):
         game, state = self.game, self.game.state
@@ -128,8 +134,19 @@ class EnhancementPanel:
             if reason and not game.feedback:
                 game.text(654, 191, reason, 15, GOLD)
         else:
-            quantity_badge(game, 654, 279, f"+{level}", "현재", CYAN, 160)
-            game.draw_button(ACTION, "제작 완료", False)
+            following = min(MAX_ENHANCEMENT, level + 1)
+            quantity_badge(game, 654, 279, f"+{level}", "현재", CYAN, 144)
+            quantity_badge(game, 850, 279, f"+{following}", "다음", GOLD, 144)
+            game.text(654, 257, "정밀제어칩", 15, MUTED)
+            quantity_pair(game, 785, 241, state.rewards["item_chip"], PERSONAL_CHIP_COST)
+            performance = state.personal_performance(self.entry.image)
+            next_performance = 100 + following * 10
+            game.text(654, 220, f"성능 {performance}% → {next_performance}%", 18, CYAN)
+            available, reason = state.personal_upgrade_status(self.entry.image)
+            label = "최대 강화 +13" if level == MAX_ENHANCEMENT else "개인 장비 강화"
+            game.draw_button(ACTION, label, available)
+            if reason and not game.feedback:
+                self.draw_note(reason)
 
     def draw(self):
         game, state = self.game, self.game.state
@@ -170,5 +187,4 @@ class EnhancementPanel:
                 quantity_badge(game, 654, 244, state.rewards[self.entry.image], "보유", CYAN, 168)
         game.draw_button(CLOSE, "돌아가기")
         if game.feedback:
-            fill_rect(280, 48, 720, 32, INK, 245)
-            game.text(296, 64, game.feedback, 15, CYAN if game.feedback_success else GOLD)
+            self.draw_note(game.feedback, CYAN if game.feedback_success else GOLD)
