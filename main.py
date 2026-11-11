@@ -33,7 +33,13 @@ def load_fonts():
         raise FileNotFoundError(
             "Set SPACE_WORKSHOP_FONT to the path of a Korean-capable TTF font."
         )
-    return {size: p2.load_font(str(font_path), size) for size in (15, 18, 22, 30)}
+    bold_path = font_path.with_name(font_path.stem + "bd" + font_path.suffix)
+    if not bold_path.is_file():
+        bold_path = font_path
+    return {
+        size: p2.load_font(str(bold_path if size >= 18 else font_path), size)
+        for size in (15, 18, 22, 26, 30)
+    }
 
 
 class Game:
