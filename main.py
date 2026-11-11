@@ -75,6 +75,19 @@ class Game:
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
 
+    def reset_session(self):
+        self.state = GameState()
+        self.player = Player()
+        self.active_station = None
+        self.selected_entry = 0
+        self.purchase_quantity = 1
+        self.feedback = ""
+        self.feedback_success = True
+        self.mouse = (0, 0)
+        self.customer_board.reset()
+        self.enhancement_panel.reset()
+        self.running = True
+
     def close_panel(self):
         self.active_station = None
         self.feedback = ""

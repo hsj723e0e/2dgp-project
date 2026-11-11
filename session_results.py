@@ -7,7 +7,8 @@ from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import HEIGHT, PERSONAL_EQUIPMENT, WIDTH
 
 
-EXIT = (530, 110, 750, 174)
+RESTART = (280, 110, 520, 174)
+EXIT = (760, 110, 1000, 174)
 
 
 class SessionResults:
@@ -15,13 +16,18 @@ class SessionResults:
         self.game = game
 
     def handle_event(self, event):
-        if event.type == sdl2.SDL_KEYDOWN and event.key == sdl2.SDLK_ESCAPE:
-            self.game.running = False
+        if event.type == sdl2.SDL_KEYDOWN:
+            if event.key == sdl2.SDLK_ESCAPE:
+                self.game.running = False
+            elif event.key in (sdl2.SDLK_r, sdl2.SDLK_RETURN):
+                self.game.reset_session()
         elif event.type == sdl2.SDL_MOUSEMOTION:
             self.game.mouse = (event.x, HEIGHT - event.y)
         elif event.type == sdl2.SDL_MOUSEBUTTONDOWN and event.button == sdl2.SDL_BUTTON_LEFT:
             self.game.mouse = (event.x, HEIGHT - event.y)
-            if contains(EXIT, *self.game.mouse):
+            if contains(RESTART, *self.game.mouse):
+                self.game.reset_session()
+            elif contains(EXIT, *self.game.mouse):
                 self.game.running = False
 
     def draw(self):
@@ -54,4 +60,5 @@ class SessionResults:
             (775, "미종료 대여", result.pending_rentals, MUTED),
         ):
             quantity_badge(game, x, 188, value, label, color, 230)
-        game.draw_button(EXIT, "게임 종료")
+        game.draw_button(RESTART, "R  새 게임")
+        game.draw_button(EXIT, "ESC  종료")
