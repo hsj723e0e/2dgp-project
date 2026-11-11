@@ -10,6 +10,25 @@ BASIC_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[:3])
 MEDIUM_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[3:])
 ALL_EQUIPMENT = BASIC_EQUIPMENT + MEDIUM_EQUIPMENT
 CUSTOMER_NAMES = {entry.image: entry.name for entry in CUSTOMERS}
+SALE_PRICES = {
+    "eq_drill_01": 32, "eq_suit_01": 50, "eq_oxygen_01": 38,
+    "eq_drill_02": 46, "eq_suit_02": 70, "eq_oxygen_02": 52,
+}
+INFORMATION_PRICE = 15
+MARKET_INTERVAL = 60
+
+
+@dataclass(frozen=True)
+class MarketEvent:
+    name: str
+    equipment: tuple
+
+
+MARKET_EVENTS = (
+    MarketEvent("소행성 채굴 구역 개방", ("eq_drill_01", "eq_drill_02")),
+    MarketEvent("우주정거장 외벽 점검", ("eq_suit_01", "eq_suit_02", "eq_oxygen_01", "eq_oxygen_02")),
+    MarketEvent("화물선 운항 중단", MEDIUM_EQUIPMENT),
+)
 
 
 @dataclass(frozen=True)

@@ -338,7 +338,7 @@ class Game:
             elif self.active_station.name == "작업대":
                 controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
-                controls = "3 주문 거절   E / ESC 닫기"
+                controls = "1 판매 / 정보 구매   3 거절   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:

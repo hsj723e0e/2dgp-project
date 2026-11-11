@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import random
 from time import monotonic
 
-from orders import CUSTOMER_NAMES, create_order
+from orders import CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL, SALE_PRICES, create_order
 from workshop import EQUIPMENT
 
 
@@ -42,6 +42,9 @@ class GameState:
         self.job = None
         self.clock = clock
         self.rng = rng if rng is not None else random.Random()
+        self.session_started_at = self.clock()
+        self.market_tip = None
+        self.market_tip_period = None
         self.current_order = create_order(1, "npc_novice", self.rng)
         self.next_order_id = 2
         self.next_customer_at = None
@@ -72,6 +75,84 @@ class GameState:
             return False, "이미 처리된 주문입니다."
         self.finish_order()
         return True, "주문을 거절했습니다. 다음 손님을 기다려 주세요."
+
+    @property
+    def market_period(self):
+        return int(max(0, self.clock() - self.session_started_at) // MARKET_INTERVAL)
+
+    @property
+    def market_event(self):
+        period = self.market_period
+        return MARKET_EVENTS[(period - 1) % len(MARKET_EVENTS)] if period else None
+
+    @property
+    def next_market_event(self):
+        return MARKET_EVENTS[self.market_period % len(MARKET_EVENTS)]
+
+    @property
+    def market_remaining(self):
+        elapsed = max(0, self.clock() - self.session_started_at)
+        return MARKET_INTERVAL - elapsed % MARKET_INTERVAL
+
+    @property
+    def known_next_event(self):
+        if self.market_tip_period == self.market_period + 1:
+            return self.market_tip
+        return None
+
+    def sale_value(self, order):
+        event = self.market_event
+        total = 0
+        for equipment, quantity in order.requirements:
+            price = SALE_PRICES[equipment]
+            if event is not None and equipment in event.equipment:
+                price = price * 125 // 100
+            total += price * quantity
+        return total
+
+    def order_status(self, order_id):
+        order = self.current_order
+        if order is None or order.identifier != order_id:
+            return False, "이미 처리된 주문입니다."
+        if order.customer == "npc_broker":
+            return False, "정보상에게는 코인으로 정보를 구매하세요."
+        if any(self.equipment[name] < quantity for name, quantity in order.requirements):
+            return False, "장비 재고가 부족합니다."
+        return True, ""
+
+    def sell_order(self, order_id):
+        available, reason = self.order_status(order_id)
+        if not available:
+            return False, reason
+        order = self.current_order
+        coins = self.sale_value(order)
+        for equipment, quantity in order.requirements:
+            self.equipment[equipment] -= quantity
+        self.coins += coins
+        self.finish_order()
+        return True, f"판매 완료 · {coins} 코인을 받았습니다."
+
+    def information_status(self, order_id):
+        order = self.current_order
+        if order is None or order.identifier != order_id:
+            return False, "이미 처리된 주문입니다."
+        if order.customer != "npc_broker":
+            return False, "정보상에게서 정보를 구매할 수 있습니다."
+        if self.coins < INFORMATION_PRICE:
+            return False, "코인이 부족합니다."
+        return True, ""
+
+    def buy_information(self, order_id):
+        available, reason = self.information_status(order_id)
+        if not available:
+            return False, reason
+        period = self.market_period
+        tip = MARKET_EVENTS[period % len(MARKET_EVENTS)].name
+        self.coins -= INFORMATION_PRICE
+        self.market_tip = tip
+        self.market_tip_period = period + 1
+        self.finish_order()
+        return True, f"{INFORMATION_PRICE} 코인으로 시장 정보를 구매했습니다."
 
     def purchase_status(self, material, quantity):
         if material not in MATERIAL_PRICES:
