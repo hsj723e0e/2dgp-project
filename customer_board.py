@@ -151,7 +151,9 @@ class CustomerBoard:
         active = sum(contract.status == "active" for contract in contracts)
         success = sum(contract.status == "success" for contract in contracts)
         lost = sum(contract.status == "lost" for contract in contracts)
-        game.text(278, 534, f"진행 {active}건 · 성공 {success}건 · 분실 {lost}건", 18, MUTED)
+        quantity_badge(game, 278, 518, active, "진행", GOLD, 130)
+        quantity_badge(game, 428, 518, success, "성공", CYAN, 130)
+        quantity_badge(game, 578, 518, lost, "분실", RED, 130)
         if not contracts:
             game.text(340, 380, "진행한 대여 계약이 없습니다.", 22, MUTED)
             return
@@ -175,8 +177,13 @@ class CustomerBoard:
         game.text(766, 329, CUSTOMER_NAMES[contract.order.customer], 22)
         status = {"active": "반납 대기", "success": "장비 반환 · 보상 지급", "lost": "장비 분실"}[contract.status]
         game.text(758, 303, status, 18, CYAN if contract.status == "success" else GOLD)
-        reward = f"{REWARD_NAMES[contract.reward_item]} {contract.reward_amount}"
-        game.text(758, 279, "보상 없음" if contract.status == "lost" else f"보상 · {reward}", 15, MUTED)
+        if contract.status == "lost":
+            game.text(758, 279, "보상 없음", 18, RED)
+        else:
+            game.text(758, 279, REWARD_NAMES[contract.reward_item], 18, MUTED)
+            quantity_badge(game, 940, 263, contract.reward_amount, color=CYAN, width=64)
         for index, (equipment, quantity) in enumerate(contract.order.requirements):
-            game.text(758, 253 - index * 22, f"{EQUIPMENT_NAMES[equipment]} {quantity}개", 15)
-        game.text(758, 150, f"계약 성공률 {contract.success_probability:.0%}", 15, MUTED)
+            y = 237 - index * 34
+            game.text(758, y + 16, EQUIPMENT_NAMES[equipment], 15)
+            quantity_badge(game, 940, y, quantity, color=GOLD, width=64)
+        game.text(758, 110, f"계약 성공률 {contract.success_probability:.0%}", 15, MUTED)
