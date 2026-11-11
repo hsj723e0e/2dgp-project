@@ -26,7 +26,7 @@ def quantity_badge(game, x, y, value, label="", color=GOLD, width=100):
     value_x = x + 10
     if label:
         game.text(x + 10, y + 16, label, 15, MUTED)
-        value_x = x + 46
+        value_x = x + max(46, len(label) * 15 + 20)
     game.text(value_x, y + 16, str(value), 22, color)
 
 

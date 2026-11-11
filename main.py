@@ -11,6 +11,7 @@ import sdl2
 
 from customer_board import CustomerBoard
 from enhancement_panel import EnhancementPanel
+from session_results import SessionResults
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
 from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
@@ -69,6 +70,7 @@ class Game:
         self.feedback_success = True
         self.customer_board = CustomerBoard(self)
         self.enhancement_panel = EnhancementPanel(self)
+        self.result_screen = SessionResults(self)
 
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
@@ -104,8 +106,7 @@ class Game:
             if event.type == sdl2.SDL_QUIT:
                 self.running = False
             elif self.state.result is not None:
-                if event.type == sdl2.SDL_KEYDOWN and event.key == sdl2.SDLK_ESCAPE:
-                    self.running = False
+                self.result_screen.handle_event(event)
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key == sdl2.SDLK_F10:
                     self.state.apply_cheat()
@@ -380,6 +381,9 @@ class Game:
     def draw(self):
         p2.clear_canvas()
         self.background.draw(WIDTH / 2, HEIGHT / 2)
+        if self.state.result is not None:
+            self.result_screen.draw()
+            return
         self.draw_station_labels()
         self.draw_shadow()
         self.player.draw(self.player_sheet)
