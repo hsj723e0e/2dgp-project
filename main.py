@@ -92,7 +92,11 @@ class Game:
             if event.type == sdl2.SDL_QUIT:
                 self.running = False
             elif event.type == sdl2.SDL_KEYDOWN:
-                if event.key == sdl2.SDLK_ESCAPE:
+                if event.key == sdl2.SDLK_F10:
+                    self.state.apply_cheat()
+                    self.feedback = "F10 치트 적용"
+                    self.feedback_success = True
+                elif event.key == sdl2.SDLK_ESCAPE:
                     if self.active_station:
                         self.close_panel()
                     else:

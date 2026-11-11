@@ -54,6 +54,12 @@ class GameState:
         self.next_order_id = 2
         self.next_customer_at = None
 
+    def apply_cheat(self):
+        self.coins = 999
+        for inventory in (self.materials, self.equipment, self.rewards):
+            for item in inventory:
+                inventory[item] = 999
+
     @property
     def next_customer_in(self):
         if self.current_order is not None or self.next_customer_at is None:
