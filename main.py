@@ -84,6 +84,8 @@ class Game:
         if self.active_station:
             self.player.moving = False
             self.player.walk_time = 0.0
+            if self.active_station.name == "주문 게시판":
+                self.customer_board.reset()
 
     def handle_events(self, events):
         for event in events:
@@ -187,7 +189,12 @@ class Game:
         self.text((left + right - text_width.value) / 2, (bottom + top) / 2 + 1, label, 18, INK)
 
     def update(self, dt):
+        self.state.update_rentals()
+        previous_order = self.state.current_order
         self.state.update_customers()
+        if previous_order is None and self.state.current_order is not None:
+            if self.active_station and self.active_station.name == "주문 게시판":
+                self.feedback = ""
         if self.active_station:
             return
         keys = sdl2.SDL_GetKeyboardState(None)
@@ -238,6 +245,8 @@ class Game:
             self.text(339, row_y, entry.name, 18, CYAN if selected else CREAM)
             if station.name == "장비 진열대":
                 self.text(550, row_y, f"{self.state.equipment[entry.image]}개", 18, GOLD)
+            elif station.name == "강화 장치" and entry.image in self.state.rewards:
+                self.text(550, row_y, f"{self.state.rewards[entry.image]}개", 18, GOLD)
 
         entry = station.entries[self.selected_entry]
         self.icons[entry.image].draw(816, 428, 144, 144)
@@ -270,6 +279,11 @@ class Game:
                 self.text(654, 208, status, 15, GOLD)
         elif station.name == "장비 진열대":
             self.text(654, 255, f"보유 수량 {self.state.equipment[entry.image]}개", 22, CYAN)
+            rented = sum(dict(contract.order.requirements).get(entry.image, 0)
+                         for contract in self.state.rentals if contract.status == "active")
+            self.text(654, 230, f"대여 중 {rented}개", 15, MUTED)
+        elif station.name == "강화 장치" and entry.image in self.state.rewards:
+            self.text(654, 255, f"보유 수량 {self.state.rewards[entry.image]}개", 22, CYAN)
         self.draw_button(CLOSE_BUTTON, "돌아가기")
         action = self.panel_action()
         if action:
@@ -338,7 +352,7 @@ class Game:
             elif self.active_station.name == "작업대":
                 controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
-                controls = "1 판매 / 정보 구매   3 거절   E / ESC 닫기"
+                controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
@@ -351,6 +365,11 @@ class Game:
             self.draw_panel()
         self.draw_crafting_status()
         self.draw_coin_counter()
+        if self.state.rentals:
+            active = sum(contract.status == "active" for contract in self.state.rentals)
+            completed = len(self.state.rentals) - active
+            fill_rect(1044, 628, 218, 29, INK, 240)
+            self.text(1055, 643, f"대여 {active}건 · 결과 {completed}건", 15, GOLD)
 
 
 def main():

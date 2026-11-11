@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from game_state import GameState
+from game_state import GameState, RECIPES
 from orders import INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL, Order, create_order
 
 
@@ -75,6 +75,23 @@ class TradingTests(unittest.TestCase):
         self.assertFalse(self.state.buy_information(51)[0])
         self.assertEqual(self.state.coins, INFORMATION_PRICE - 1)
         self.assertEqual(self.state.current_order.identifier, 51)
+        self.assertEqual(sum(self.state.equipment.values()), 0)
+
+    def test_new_session_can_buy_craft_collect_and_sell_first_order(self):
+        order = self.state.current_order
+        for equipment, quantity in order.requirements:
+            recipe = RECIPES[equipment]
+            for material, needed in recipe.ingredients.items():
+                self.assertTrue(self.state.purchase(material, needed * quantity)[0])
+            for _ in range(quantity):
+                self.assertTrue(self.state.start_craft(equipment)[0])
+                self.now += recipe.seconds
+                self.assertTrue(self.state.collect()[0])
+        coins = self.state.coins
+        value = self.state.sale_value(order)
+        self.assertTrue(self.state.sell_order(order.identifier)[0])
+        self.assertEqual(self.state.coins, coins + value)
+        self.assertGreater(self.state.coins, 100)
         self.assertEqual(sum(self.state.equipment.values()), 0)
 
 

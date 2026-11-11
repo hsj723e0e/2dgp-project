@@ -16,6 +16,9 @@ SALE_PRICES = {
 }
 INFORMATION_PRICE = 15
 MARKET_INTERVAL = 60
+RENTAL_SUCCESS_RATE = 0.85
+RENTAL_DURATIONS = {"npc_novice": 25, "npc_expert": 30, "npc_tourist": 35, "npc_mysterious": 40}
+REWARD_NAMES = {"coins": "코인", "item_chip": "정밀제어칩", "item_core": "고출력 코어", "item_secret": "미확인 상자"}
 
 
 @dataclass(frozen=True)
@@ -40,6 +43,16 @@ class Order:
     @property
     def quantity(self):
         return sum(quantity for _, quantity in self.requirements)
+
+
+@dataclass
+class RentalContract:
+    order: Order
+    due_at: float
+    success_probability: float
+    reward_item: str
+    reward_amount: int
+    status: str = "active"
 
 
 def create_order(identifier, customer, rng):

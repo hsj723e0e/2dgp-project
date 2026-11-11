@@ -66,6 +66,7 @@ PERSONAL_EQUIPMENT = (
     Entry("자급형 생명유지장치", "eq_oxygen_03", "최상급 산소 장치 · 고출력 코어 12개로 제작"),
     Entry("정밀제어칩", "item_chip", "개인 장비 강화 시 3개 사용"),
     Entry("고출력 코어", "item_core", "최상급 장비 제작 시 12개 사용"),
+    Entry("미확인 상자", "item_secret", "수상한 손님 대여 보상 · 효과 미정"),
 )
 
 
@@ -77,7 +78,7 @@ STATIONS = (
     Station("주문 게시판", 640, 360,
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,
-            "작업대에서 회수한 장비의 보유 수량을 확인하세요.", EQUIPMENT),
+            "현재 거래에 사용할 수 있는 장비의 보유 수량입니다.", EQUIPMENT),
     Station("강화 장치", 1005, 225,
             "나만의 최상급 장비와 성장 재료를 확인하세요.", PERSONAL_EQUIPMENT),
 )

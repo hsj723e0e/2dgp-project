@@ -4,7 +4,10 @@ from dataclasses import dataclass
 import random
 from time import monotonic
 
-from orders import CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL, SALE_PRICES, create_order
+from orders import (
+    CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL,
+    RENTAL_DURATIONS, RENTAL_SUCCESS_RATE, SALE_PRICES, RentalContract, create_order,
+)
 from workshop import EQUIPMENT
 
 
@@ -45,6 +48,8 @@ class GameState:
         self.session_started_at = self.clock()
         self.market_tip = None
         self.market_tip_period = None
+        self.rewards = {"item_chip": 0, "item_core": 0, "item_secret": 0}
+        self.rentals = []
         self.current_order = create_order(1, "npc_novice", self.rng)
         self.next_order_id = 2
         self.next_customer_at = None
@@ -153,6 +158,52 @@ class GameState:
         self.market_tip_period = period + 1
         self.finish_order()
         return True, f"{INFORMATION_PRICE} 코인으로 시장 정보를 구매했습니다."
+
+    def rental_reward(self, order):
+        if order.customer == "npc_novice":
+            return "item_chip", order.quantity
+        if order.customer == "npc_expert":
+            return "item_core", order.quantity
+        if order.customer == "npc_tourist":
+            return "coins", max(1, self.sale_value(order) * 60 // 100)
+        if order.customer == "npc_mysterious":
+            return "item_secret", 1
+        raise ValueError("The information broker has no rental contract")
+
+    def start_rental(self, order_id):
+        available, reason = self.order_status(order_id)
+        if not available:
+            return False, reason
+        order = self.current_order
+        reward_item, reward_amount = self.rental_reward(order)
+        contract = RentalContract(
+            order=order,
+            due_at=self.clock() + RENTAL_DURATIONS[order.customer],
+            success_probability=RENTAL_SUCCESS_RATE,
+            reward_item=reward_item,
+            reward_amount=reward_amount,
+        )
+        for equipment, quantity in order.requirements:
+            self.equipment[equipment] -= quantity
+        self.rentals.append(contract)
+        self.finish_order()
+        return True, "대여를 시작했습니다. 대여 현황에서 결과를 확인하세요."
+
+    def update_rentals(self):
+        now = self.clock()
+        for contract in self.rentals:
+            if contract.status != "active" or now < contract.due_at:
+                continue
+            if self.rng.random() < contract.success_probability:
+                for equipment, quantity in contract.order.requirements:
+                    self.equipment[equipment] += quantity
+                if contract.reward_item == "coins":
+                    self.coins += contract.reward_amount
+                else:
+                    self.rewards[contract.reward_item] += contract.reward_amount
+                contract.status = "success"
+            else:
+                contract.status = "lost"
 
     def purchase_status(self, material, quantity):
         if material not in MATERIAL_PRICES:
