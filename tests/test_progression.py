@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from game_state import GameState, rental_success_probability
+from game_state import GameState, PERSONAL_IDS, rental_success_probability
 from orders import Order
 
 
@@ -74,3 +74,26 @@ class EquipmentUnitTests(unittest.TestCase):
         second.level = 13
         self.assertAlmostEqual(contract.success_probability, .87)
         self.assertAlmostEqual(rental_success_probability((second,)), .98)
+
+
+class PersonalEquipmentTests(unittest.TestCase):
+    def test_each_personal_type_uses_twelve_cores_and_stays_separate_from_stock(self):
+        state = GameState()
+        state.rewards["item_core"] = 36
+        for equipment in PERSONAL_IDS:
+            self.assertTrue(state.craft_personal(equipment)[0])
+            self.assertEqual(state.personal_equipment[equipment], 0)
+            self.assertNotIn(equipment, state.equipment)
+        self.assertEqual(state.rewards["item_core"], 0)
+        self.assertEqual(sum(state.equipment.values()), 0)
+
+    def test_missing_cores_duplicate_and_unknown_personal_craft_are_atomic(self):
+        state = GameState()
+        state.rewards["item_core"] = 11
+        self.assertFalse(state.craft_personal(PERSONAL_IDS[0])[0])
+        self.assertEqual(state.rewards["item_core"], 11)
+        state.rewards["item_core"] = 24
+        self.assertTrue(state.craft_personal(PERSONAL_IDS[0])[0])
+        self.assertFalse(state.craft_personal(PERSONAL_IDS[0])[0])
+        self.assertFalse(state.craft_personal("eq_drill_01")[0])
+        self.assertEqual(state.rewards["item_core"], 12)

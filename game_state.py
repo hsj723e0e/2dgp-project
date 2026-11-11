@@ -9,12 +9,15 @@ from orders import (
     CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL,
     RENTAL_DURATIONS, RENTAL_SUCCESS_RATE, SALE_PRICES, RentalContract, create_order,
 )
-from workshop import EQUIPMENT
+from workshop import EQUIPMENT, PERSONAL_EQUIPMENT
 
 
 MATERIAL_PRICES = {"mat_01": 8, "mat_02": 12, "mat_03": 4}
 CUSTOMER_INTERVAL = 8
 MAX_ENHANCEMENT = 13
+PERSONAL_CORE_COST = 12
+PERSONAL_CHIP_COST = 3
+PERSONAL_IDS = tuple(entry.image for entry in PERSONAL_EQUIPMENT[:3])
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,7 @@ class GameState:
         self.market_tip = None
         self.market_tip_period = None
         self.rewards = {"item_chip": 0, "item_core": 0, "item_secret": 0}
+        self.personal_equipment = {equipment: None for equipment in PERSONAL_IDS}
         self.rentals = []
         self.current_order = create_order(1, "npc_novice", self.rng)
         self.next_order_id = 2
@@ -147,6 +151,23 @@ class GameState:
         self.coins -= basic_upgrade_cost(unit)
         unit.level += 1
         return True, f"선택한 장비를 +{unit.level}로 강화했습니다."
+
+    def personal_craft_status(self, equipment):
+        if equipment not in self.personal_equipment:
+            return False, "제작할 수 없는 개인 장비입니다."
+        if self.personal_equipment[equipment] is not None:
+            return False, "이미 보유한 개인 장비입니다."
+        if self.rewards["item_core"] < PERSONAL_CORE_COST:
+            return False, "고출력 코어가 부족합니다."
+        return True, ""
+
+    def craft_personal(self, equipment):
+        available, reason = self.personal_craft_status(equipment)
+        if not available:
+            return False, reason
+        self.rewards["item_core"] -= PERSONAL_CORE_COST
+        self.personal_equipment[equipment] = 0
+        return True, "개인 최상급 장비를 제작했습니다."
 
     @property
     def next_customer_in(self):
