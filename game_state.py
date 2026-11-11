@@ -1,6 +1,7 @@
 """Session currency, inventory, and the workbench's single crafting job."""
 
 from dataclasses import dataclass
+from collections import Counter
 import random
 from time import monotonic
 
@@ -37,11 +38,20 @@ class CraftJob:
     ready_at: float
 
 
+@dataclass
+class EquipmentUnit:
+    identifier: int
+    equipment: str
+    level: int = 0
+
+
 class GameState:
     def __init__(self, clock=monotonic, rng=None):
         self.coins = 100
         self.materials = {name: 0 for name in MATERIAL_PRICES}
         self.equipment = {entry.image: 0 for entry in EQUIPMENT}
+        self.equipment_units = {entry.image: [] for entry in EQUIPMENT}
+        self.next_unit_id = 1
         self.job = None
         self.clock = clock
         self.rng = rng if rng is not None else random.Random()
@@ -59,6 +69,52 @@ class GameState:
         for inventory in (self.materials, self.equipment, self.rewards):
             for item in inventory:
                 inventory[item] = 999
+        for equipment in self.equipment:
+            self.available_units(equipment)
+
+    def available_units(self, equipment):
+        units = self.equipment_units[equipment]
+        count = self.equipment[equipment]
+        # Count-only inventories created by earlier callers become +0 units.
+        while len(units) < count:
+            units.append(EquipmentUnit(self.next_unit_id, equipment))
+            self.next_unit_id += 1
+        del units[count:]
+        return tuple(units)
+
+    def add_equipment(self, equipment, quantity):
+        self.available_units(equipment)
+        self.equipment[equipment] += quantity
+        self.available_units(equipment)
+
+    def order_units(self, order, unit_ids=None):
+        available = {}
+        defaults = []
+        for equipment, quantity in order.requirements:
+            units = self.available_units(equipment)
+            available.update((unit.identifier, unit) for unit in units)
+            defaults.extend(units[:quantity])
+        if unit_ids is None:
+            return tuple(defaults)
+        if len(unit_ids) != order.quantity or len(set(unit_ids)) != len(unit_ids):
+            raise ValueError("요청 수량에 맞게 서로 다른 장비를 선택하세요.")
+        if any(identifier not in available for identifier in unit_ids):
+            raise ValueError("선택한 장비를 현재 사용할 수 없습니다.")
+        units = tuple(available[identifier] for identifier in unit_ids)
+        if Counter(unit.equipment for unit in units) != Counter(dict(order.requirements)):
+            raise ValueError("주문에서 요구한 종류의 장비를 선택하세요.")
+        return units
+
+    def take_units(self, units):
+        for unit in units:
+            self.equipment_units[unit.equipment].remove(unit)
+            self.equipment[unit.equipment] -= 1
+
+    def return_units(self, units):
+        for unit in units:
+            self.available_units(unit.equipment)
+            self.equipment_units[unit.equipment].append(unit)
+            self.equipment[unit.equipment] += 1
 
     @property
     def next_customer_in(self):
@@ -121,7 +177,7 @@ class GameState:
             total += price * quantity
         return total
 
-    def order_status(self, order_id):
+    def order_status(self, order_id, unit_ids=None):
         order = self.current_order
         if order is None or order.identifier != order_id:
             return False, "이미 처리된 주문입니다."
@@ -129,16 +185,20 @@ class GameState:
             return False, "정보상에게는 코인으로 정보를 구매하세요."
         if any(self.equipment[name] < quantity for name, quantity in order.requirements):
             return False, "장비 재고가 부족합니다."
+        if unit_ids is not None:
+            try:
+                self.order_units(order, unit_ids)
+            except ValueError as error:
+                return False, str(error)
         return True, ""
 
-    def sell_order(self, order_id):
-        available, reason = self.order_status(order_id)
+    def sell_order(self, order_id, unit_ids=None):
+        available, reason = self.order_status(order_id, unit_ids)
         if not available:
             return False, reason
         order = self.current_order
         coins = self.sale_value(order)
-        for equipment, quantity in order.requirements:
-            self.equipment[equipment] -= quantity
+        self.take_units(self.order_units(order, unit_ids))
         self.coins += coins
         self.finish_order()
         return True, f"판매 완료 · {coins} 코인을 받았습니다."
@@ -176,21 +236,22 @@ class GameState:
             return "item_secret", 1
         raise ValueError("The information broker has no rental contract")
 
-    def start_rental(self, order_id):
-        available, reason = self.order_status(order_id)
+    def start_rental(self, order_id, unit_ids=None):
+        available, reason = self.order_status(order_id, unit_ids)
         if not available:
             return False, reason
         order = self.current_order
         reward_item, reward_amount = self.rental_reward(order)
+        units = self.order_units(order, unit_ids)
         contract = RentalContract(
             order=order,
             due_at=self.clock() + RENTAL_DURATIONS[order.customer],
             success_probability=RENTAL_SUCCESS_RATE,
             reward_item=reward_item,
             reward_amount=reward_amount,
+            units=units,
         )
-        for equipment, quantity in order.requirements:
-            self.equipment[equipment] -= quantity
+        self.take_units(units)
         self.rentals.append(contract)
         self.finish_order()
         return True, "대여를 시작했습니다. 대여 현황에서 결과를 확인하세요."
@@ -201,8 +262,11 @@ class GameState:
             if contract.status != "active" or now < contract.due_at:
                 continue
             if self.rng.random() < contract.success_probability:
-                for equipment, quantity in contract.order.requirements:
-                    self.equipment[equipment] += quantity
+                if contract.units:
+                    self.return_units(contract.units)
+                else:
+                    for equipment, quantity in contract.order.requirements:
+                        self.add_equipment(equipment, quantity)
                 if contract.reward_item == "coins":
                     self.coins += contract.reward_amount
                 else:
@@ -267,6 +331,6 @@ class GameState:
             return False, "회수할 완성품이 없습니다."
         if not self.ready_to_collect:
             return False, "아직 제작 중입니다."
-        self.equipment[self.job.equipment] += 1
+        self.add_equipment(self.job.equipment, 1)
         self.job = None
         return True, "완성된 장비 1개를 회수했습니다."
