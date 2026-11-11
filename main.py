@@ -224,6 +224,8 @@ class Game:
         self.draw_panel_frame()
         self.text(278, 572, station.name, 30)
         self.text(278, 534, station.subtitle, 18, MUTED)
+        if station.name == "장비 진열대":
+            self.text(875, 572, f"총 {sum(self.state.equipment.values())}개", 22, GOLD)
         fill_rect(275, 510, 730, 2, (61, 87, 103))
         for index, entry in enumerate(station.entries):
             row_y = 478 - index * 52
@@ -233,6 +235,8 @@ class Game:
                 fill_rect(275, row_y - 24, 3, 48, CYAN)
             self.icons[entry.image].draw(306, row_y, 42, 42)
             self.text(339, row_y, entry.name, 18, CYAN if selected else CREAM)
+            if station.name == "장비 진열대":
+                self.text(550, row_y, f"{self.state.equipment[entry.image]}개", 18, GOLD)
 
         entry = station.entries[self.selected_entry]
         self.icons[entry.image].draw(816, 428, 144, 144)
@@ -263,6 +267,8 @@ class Game:
                 self.text(654, 230, equipment_name, 18, CYAN)
                 status = "완성 · 회수 가능" if self.state.ready_to_collect else f"남은 시간 {self.state.remaining:.1f}초"
                 self.text(654, 208, status, 15, GOLD)
+        elif station.name == "장비 진열대":
+            self.text(654, 255, f"보유 수량 {self.state.equipment[entry.image]}개", 22, CYAN)
         self.draw_button(CLOSE_BUTTON, "돌아가기")
         action = self.panel_action()
         if action:

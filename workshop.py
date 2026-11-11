@@ -77,7 +77,7 @@ STATIONS = (
     Station("주문 게시판", 640, 360,
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,
-            "공방에서 취급하는 장비를 살펴보세요.", EQUIPMENT),
+            "작업대에서 회수한 장비의 보유 수량을 확인하세요.", EQUIPMENT),
     Station("강화 장치", 1005, 225,
             "나만의 최상급 장비와 성장 재료를 확인하세요.", PERSONAL_EQUIPMENT),
 )
