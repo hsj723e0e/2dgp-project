@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from game_state import GameState
+from game_state import GameState, rental_success_probability
 from orders import Order
 
 
@@ -62,3 +62,15 @@ class EquipmentUnitTests(unittest.TestCase):
         self.assertFalse(self.state.enhance_basic("eq_drill_01", unit.identifier)[0])
         self.assertFalse(self.state.enhance_basic("eq_drill_01", 9999)[0])
         self.assertEqual(self.state.coins, 999)
+
+    def test_rental_uses_selected_average_level_and_freezes_probability(self):
+        self.state.equipment["eq_drill_01"] = 2
+        first, second = self.state.available_units("eq_drill_01")
+        second.level = 4
+        self.state.current_order = Order(41, "npc_novice", (("eq_drill_01", 2),))
+        self.assertTrue(self.state.start_rental(41, (first.identifier, second.identifier))[0])
+        contract = self.state.rentals[-1]
+        self.assertAlmostEqual(contract.success_probability, .87)
+        second.level = 13
+        self.assertAlmostEqual(contract.success_probability, .87)
+        self.assertAlmostEqual(rental_success_probability((second,)), .98)

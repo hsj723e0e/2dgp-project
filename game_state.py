@@ -51,6 +51,11 @@ def basic_upgrade_cost(unit):
     return base_cost * (unit.level + 1)
 
 
+def rental_success_probability(units):
+    average_level = sum(unit.level for unit in units) / len(units) if units else 0
+    return min(0.98, RENTAL_SUCCESS_RATE + average_level * 0.01)
+
+
 class GameState:
     def __init__(self, clock=monotonic, rng=None):
         self.coins = 100
@@ -273,7 +278,7 @@ class GameState:
         contract = RentalContract(
             order=order,
             due_at=self.clock() + RENTAL_DURATIONS[order.customer],
-            success_probability=RENTAL_SUCCESS_RATE,
+            success_probability=rental_success_probability(units),
             reward_item=reward_item,
             reward_amount=reward_amount,
             units=units,
