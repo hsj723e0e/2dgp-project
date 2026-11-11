@@ -71,7 +71,7 @@ PERSONAL_EQUIPMENT = (
 
 STATIONS = (
     Station("작업대", 290, 345,
-            "초급 장비를 제작하고, 완성된 장비를 직접 회수하세요.", EQUIPMENT[:3]),
+            "초급·중급 장비를 제작하고, 완성품을 직접 회수하세요.", EQUIPMENT),
     Station("재료 보관대", 255, 230,
             "수량을 선택하고 코인으로 기본 재료를 구매하세요.", MATERIALS),
     Station("주문 게시판", 640, 360,

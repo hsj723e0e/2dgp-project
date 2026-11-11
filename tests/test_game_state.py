@@ -38,7 +38,8 @@ class CraftingTests(unittest.TestCase):
         self.state.purchase("mat_03", 5)
 
     def test_all_three_recipes_and_manual_collection(self):
-        for equipment, recipe in RECIPES.items():
+        for equipment in ("eq_drill_01", "eq_suit_01", "eq_oxygen_01"):
+            recipe = RECIPES[equipment]
             with self.subTest(equipment=equipment):
                 materials_before = self.state.materials.copy()
                 self.assertTrue(self.state.start_craft(equipment)[0])
@@ -91,6 +92,19 @@ class CraftingTests(unittest.TestCase):
             self.assertFalse(state.start_craft(equipment)[0])
             self.assertEqual(state.materials, materials)
             self.assertIsNone(state.job)
+
+    def test_medium_recipes_use_composite_materials_and_can_be_collected(self):
+        for equipment in ("eq_drill_02", "eq_suit_02", "eq_oxygen_02"):
+            with self.subTest(equipment=equipment):
+                state = GameState(clock=lambda: self.now)
+                recipe = RECIPES[equipment]
+                for name, quantity in recipe.ingredients.items():
+                    self.assertTrue(state.purchase(name, quantity)[0])
+                self.assertTrue(state.start_craft(equipment)[0])
+                self.now += recipe.seconds
+                self.assertTrue(state.collect()[0])
+                self.assertEqual(state.equipment[equipment], 1)
+                self.assertEqual(sum(state.materials.values()), 0)
 
 
 if __name__ == "__main__":

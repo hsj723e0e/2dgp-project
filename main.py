@@ -8,25 +8,16 @@ from time import perf_counter
 from pico2d import pico2d as p2
 import sdl2
 
+from customer_board import CustomerBoard
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
+from ui import CREAM, CYAN, GOLD, INK, MUTED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
 CLOSE_BUTTON = (280, 116, 520, 180)
 ACTION_BUTTON = (708, 116, 948, 180)
-INK = (15, 28, 43)
-CREAM = (241, 229, 198)
-MUTED = (169, 188, 195)
-CYAN = (101, 224, 217)
-GOLD = (244, 190, 101)
-
-
-def fill_rect(x, y, width, height, color, alpha=255):
-    sdl2.SDL_SetRenderDrawColor(p2.renderer, *color, alpha)
-    rectangle = p2.to_sdl_rect(x, y, width, height)
-    sdl2.SDL_RenderFillRect(p2.renderer, ctypes.byref(rectangle))
 
 
 def load_fonts():
@@ -68,6 +59,7 @@ class Game:
         self.purchase_quantity = 1
         self.feedback = ""
         self.feedback_success = True
+        self.customer_board = CustomerBoard(self)
 
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
@@ -105,6 +97,8 @@ class Game:
                         self.running = False
                 elif event.key in (sdl2.SDLK_e, sdl2.SDLK_RETURN):
                     self.interact()
+                elif self.active_station and self.active_station.name == "주문 게시판":
+                    self.customer_board.handle_key(event.key)
                 elif self.active_station:
                     if event.key in (sdl2.SDLK_UP, sdl2.SDLK_w):
                         self.select_entry(self.selected_entry - 1)
@@ -124,6 +118,9 @@ class Game:
 
     def handle_click(self, x, y):
         if not self.active_station:
+            return
+        if self.active_station.name == "주문 게시판":
+            self.customer_board.handle_click(x, y)
             return
         left, bottom, right, top = CLOSE_BUTTON
         if left <= x <= right and bottom <= y <= top:
@@ -190,6 +187,7 @@ class Game:
         self.text((left + right - text_width.value) / 2, (bottom + top) / 2 + 1, label, 18, INK)
 
     def update(self, dt):
+        self.state.update_customers()
         if self.active_station:
             return
         keys = sdl2.SDL_GetKeyboardState(None)
@@ -220,6 +218,9 @@ class Game:
 
     def draw_panel(self):
         station = self.active_station
+        if station.name == "주문 게시판":
+            self.customer_board.draw()
+            return
         fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
         self.draw_panel_frame()
         self.text(278, 572, station.name, 30)
@@ -336,6 +337,8 @@ class Game:
                 controls = "↑ ↓ 선택   ← → 수량   SPACE 구매   E / ESC 닫기"
             elif self.active_station.name == "작업대":
                 controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
+            elif self.active_station.name == "주문 게시판":
+                controls = "3 주문 거절   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:
