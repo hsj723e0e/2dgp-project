@@ -97,3 +97,28 @@ class PersonalEquipmentTests(unittest.TestCase):
         self.assertFalse(state.craft_personal(PERSONAL_IDS[0])[0])
         self.assertFalse(state.craft_personal("eq_drill_01")[0])
         self.assertEqual(state.rewards["item_core"], 12)
+
+    def test_personal_upgrade_uses_three_chips_and_stops_at_thirteen(self):
+        state = GameState()
+        state.rewards["item_core"] = 12
+        state.rewards["item_chip"] = 39
+        equipment = PERSONAL_IDS[0]
+        state.craft_personal(equipment)
+        for level in range(1, 14):
+            self.assertTrue(state.enhance_personal(equipment)[0])
+            self.assertEqual(state.personal_equipment[equipment], level)
+        self.assertEqual(state.personal_performance(equipment), 230)
+        self.assertEqual(state.rewards["item_chip"], 0)
+        state.rewards["item_chip"] = 3
+        self.assertFalse(state.enhance_personal(equipment)[0])
+        self.assertEqual(state.rewards["item_chip"], 3)
+
+    def test_personal_upgrade_cannot_use_coins_or_unowned_equipment(self):
+        state = GameState()
+        state.coins = 999
+        self.assertFalse(state.enhance_personal(PERSONAL_IDS[0])[0])
+        state.rewards["item_core"] = 12
+        state.craft_personal(PERSONAL_IDS[0])
+        self.assertFalse(state.enhance_personal(PERSONAL_IDS[0])[0])
+        self.assertEqual(state.personal_equipment[PERSONAL_IDS[0]], 0)
+        self.assertEqual(state.coins, 999)

@@ -169,6 +169,27 @@ class GameState:
         self.personal_equipment[equipment] = 0
         return True, "개인 최상급 장비를 제작했습니다."
 
+    def personal_upgrade_status(self, equipment):
+        if equipment not in self.personal_equipment or self.personal_equipment[equipment] is None:
+            return False, "먼저 개인 장비를 제작하세요."
+        if self.personal_equipment[equipment] >= MAX_ENHANCEMENT:
+            return False, "최대 강화 +13에 도달했습니다."
+        if self.rewards["item_chip"] < PERSONAL_CHIP_COST:
+            return False, "정밀제어칩이 부족합니다."
+        return True, ""
+
+    def enhance_personal(self, equipment):
+        available, reason = self.personal_upgrade_status(equipment)
+        if not available:
+            return False, reason
+        self.rewards["item_chip"] -= PERSONAL_CHIP_COST
+        self.personal_equipment[equipment] += 1
+        return True, f"개인 장비를 +{self.personal_equipment[equipment]}로 강화했습니다."
+
+    def personal_performance(self, equipment):
+        level = self.personal_equipment[equipment]
+        return None if level is None else 100 + level * 10
+
     @property
     def next_customer_in(self):
         if self.current_order is not None or self.next_customer_at is None:
