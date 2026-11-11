@@ -37,8 +37,19 @@ class Station:
     entries: tuple
 
 
-STATIONS = (
+EQUIPMENT = (
+    Entry("고철 드릴", "eq_drill_01", "초급 드릴 · 재활용 부품 + 전자회로"),
+    Entry("보급형 우주복", "eq_suit_01", "초급 우주복 · 재활용 부품 + 전자회로"),
+    Entry("소형 산소통", "eq_oxygen_01", "초급 산소 장치 · 재활용 부품 + 전자회로"),
+    Entry("합금 드릴", "eq_drill_02", "중급 드릴 · 고급 복합소재 + 전자회로"),
+    Entry("강화 우주복", "eq_suit_02", "중급 우주복 · 고급 복합소재 + 전자회로"),
+    Entry("순환형 산소통", "eq_oxygen_02", "중급 산소 장치 · 고급 복합소재 + 전자회로"),
+)
 
+
+STATIONS = (
+    Station("작업대", 290, 345,
+            "제작 가능한 초급·중급 장비와 재료를 살펴보세요.", EQUIPMENT),
 )
 
 
