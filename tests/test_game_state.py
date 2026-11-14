@@ -193,15 +193,12 @@ class CraftMaterialStagingTests(unittest.TestCase):
         self.assertFalse(self.state.staged_materials)
         self.assertFalse(self.state.stage_craft_material("eq_suit_01", "mat_01")[0])
 
-    def test_cheat_changes_only_coins_and_preserves_staged_materials(self):
+    def test_cheat_replenishes_coins_and_materials_and_preserves_staging(self):
         self.state.stage_craft_material("eq_suit_01", "mat_01")
-        before = self.state.materials.copy()
         self.state.apply_cheat()
         self.assertEqual(self.state.coins, 999)
-        self.assertEqual(self.state.materials, before)
+        self.assertEqual(self.state.materials, {"mat_01": 999, "mat_02": 999, "mat_03": 999})
         self.assertEqual(self.state.staged_materials, {"mat_01": 3})
-        self.state.clear_craft_materials()
-        self.assertEqual(self.state.materials["mat_01"], 3)
 
 
 if __name__ == "__main__":

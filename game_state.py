@@ -143,6 +143,9 @@ class GameState:
         if self.session_over:
             return
         self.coins = 999
+        for material in MATERIAL_PRICES:
+            if self.materials[material] > 0 or material in self.staged_materials or self.inventory_free > 0:
+                self.materials[material] = 999
 
     @property
     def inventory_used(self):

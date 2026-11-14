@@ -120,6 +120,18 @@ class InventoryTests(unittest.TestCase):
         self.assertTrue(self.state.craft_personal(PERSONAL_IDS[0])[0])
         self.assertEqual(self.state.inventory_used, 9)
 
+    def test_cheat_fills_all_material_stacks_without_creating_equipment_or_rewards(self):
+        self.state.add_equipment("eq_drill_01", 2)
+        equipment = self.state.equipment.copy()
+        rewards = self.state.rewards.copy()
+        self.state.apply_cheat()
+        self.state.apply_cheat()
+        self.assertEqual(self.state.coins, 999)
+        self.assertTrue(all(count == 999 for count in self.state.materials.values()))
+        self.assertEqual(self.state.equipment, equipment)
+        self.assertEqual(self.state.rewards, rewards)
+        self.assertEqual(self.state.inventory_used, 5)
+
     def test_session_result_includes_pending_returns_and_freezes_delivery(self):
         self.state.add_equipment("eq_drill_01", 1)
         self.state.current_order = Order(52, "npc_novice", (("eq_drill_01", 1),))

@@ -143,7 +143,7 @@ class Game:
                 if event.key == sdl2.SDLK_F10:
                     self.state.apply_cheat()
                     self.customer_board.cancel_selection()
-                    self.feedback = "F10 · 코인 999 적용"
+                    self.feedback = "F10 · 코인·기본 재료 999 적용"
                     self.feedback_success = True
                 elif (self.active_station and self.active_station.name == "주문 게시판"
                       and self.customer_board.unit_action and event.key in (sdl2.SDLK_RETURN, sdl2.SDLK_ESCAPE)):
