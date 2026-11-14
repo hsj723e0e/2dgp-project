@@ -6,7 +6,7 @@ import sdl2
 
 from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, REWARD_NAMES
 from inventory_panel import draw_grid, slot_bounds
-from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
+from ui import draw_item_icon, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import EQUIPMENT, HEIGHT, WIDTH
 
 
@@ -224,14 +224,14 @@ class CustomerBoard:
             game.text(340, 380, f"다음 방문까지 {state.next_customer_in:.1f}초", 22, GOLD)
         else:
             game.text(278, 534, f"{CUSTOMER_NAMES[order.customer]}의 주문", 18, MUTED)
-            game.icons[order.customer].draw(870, 430, 152, 152)
+            draw_item_icon(game, order.customer, 870, 430, 152, 152)
             game.text(766, 329, CUSTOMER_NAMES[order.customer], 22)
             for index, (equipment, quantity) in enumerate(order.requirements):
                 y = 480 - index * 38
                 fill_rect(275, y - 17, 440, 34, (20, 40, 56))
                 if state.equipment[equipment] < quantity:
                     fill_rect(275, y - 17, 3, 34, RED)
-                game.icons[equipment].draw(301, y, 34, 34)
+                draw_item_icon(game, equipment, 301, y, 34, 34)
                 game.text(328, y, EQUIPMENT_NAMES[equipment], 18)
                 game.text(535, y, '×', 18, MUTED)
                 game.text(565, y, str(quantity), 26, GOLD)
@@ -245,7 +245,7 @@ class CustomerBoard:
                 for index, (image, quantity) in enumerate(owned.items()):
                     x = 275 + index * 48
                     fill_rect(x, 263, 44, 58, (20, 40, 56))
-                    game.icons[image].draw(x + 22, 300, 36, 36)
+                    draw_item_icon(game, image, x + 22, 300, 36, 36)
                     game.text(x + 5, 277, str(quantity), 22 if quantity < 1000 else 15, CYAN)
             if order.customer == "npc_broker":
                 game.text(278, 465, "코인을 받고 다음 시장 사건을 알려드립니다.", 18)
@@ -294,7 +294,7 @@ class CustomerBoard:
             fill_rect(275, row_y - 24, 440, 48, (40, 68, 83) if selected else (20, 40, 56))
             if selected:
                 fill_rect(275, row_y - 24, 3, 48, CYAN)
-            game.icons[contract.order.customer].draw(306, row_y, 42, 42)
+            draw_item_icon(game, contract.order.customer, 306, row_y, 42, 42)
             game.text(339, row_y + 8, CUSTOMER_NAMES[contract.order.customer], 18)
             if contract.status == "active":
                 status = f"진행 중 · {max(0, contract.due_at - state.clock()):.1f}초"
@@ -305,7 +305,7 @@ class CustomerBoard:
             game.text(339, row_y - 13, status, 15, CYAN if contract.status == "success" else GOLD)
         game.text(278, 125, f"↑ ↓ 항목 선택 · {start // 6 + 1} / {(len(contracts) + 5) // 6}쪽", 15, MUTED)
         contract = contracts[self.selected_contract]
-        game.icons[contract.order.customer].draw(870, 430, 152, 152)
+        draw_item_icon(game, contract.order.customer, 870, 430, 152, 152)
         game.text(766, 329, CUSTOMER_NAMES[contract.order.customer], 22)
         status = {"active": "탐사 중", "returning": "반납 대기 · 가방 공간 부족", "success": "장비 반환 · 보상 지급", "lost": "장비 분실"}[contract.status]
         game.text(758, 303, status, 18, CYAN if contract.status == "success" else GOLD)
@@ -346,7 +346,7 @@ class CustomerBoard:
         game.text(308, 255, f"선택  {len(self.chosen_units)} / {order.quantity}", 22, CYAN)
         for index, (equipment, quantity) in enumerate(order.requirements):
             y = 470 - index * 50
-            game.icons[equipment].draw(675, y - 5, 38, 38)
+            draw_item_icon(game, equipment, 675, y - 5, 38, 38)
             game.text(708, y + 3, EQUIPMENT_NAMES[equipment], 18)
             game.text(929, y + 3, '×', 18, MUTED)
             game.text(957, y + 3, str(quantity), 22, GOLD)
@@ -372,11 +372,11 @@ class CustomerBoard:
             y = 470 - index * 60
             selected = index == self.selected_slot
             fill_rect(275, y - 26, 440, 52, (40, 68, 83) if selected else (20, 40, 56))
-            game.icons[unit.equipment].draw(305, y, 42, 42)
+            draw_item_icon(game, unit.equipment, 305, y, 42, 42)
             game.text(339, y, EQUIPMENT_NAMES[unit.equipment], 18)
             quantity_badge(game, 594, y - 16, f"+{unit.level}", color=CYAN, width=110)
         unit = units[self.selected_slot]
-        game.icons[unit.equipment].draw(816, 428, 144, 144)
+        draw_item_icon(game, unit.equipment, 816, 428, 144, 144)
         game.text(654, 329, EQUIPMENT_NAMES[unit.equipment], 22)
         quantity_badge(game, 654, 279, f"+{unit.level}", "강화", CYAN, 160)
         available = game.state.available_units(unit.equipment)

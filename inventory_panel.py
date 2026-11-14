@@ -2,7 +2,7 @@
 
 import sdl2
 
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
+from ui import ITEM_TIERS, TIER_COLORS, draw_item_icon, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, PERSONAL_EQUIPMENT, RESOURCE_ITEMS, WIDTH
 
 
@@ -54,13 +54,18 @@ def draw_grid(game, origin, items, columns, rows, selected_unit_id=None,
         if selected:
             color = GOLD
             border_width = 3
+        if selected or active:
+            fill_rect(left - 2, bottom - 2, SLOT_SIZE + 4, SLOT_SIZE + 4, color)
+        if index < len(items) and items[index].image in ITEM_TIERS:
+            color = TIER_COLORS[ITEM_TIERS[items[index].image]]
+            border_width = 2
         fill_rect(left, bottom, SLOT_SIZE, SLOT_SIZE, color)
         fill_rect(left + border_width, bottom + border_width,
                   SLOT_SIZE - border_width * 2, SLOT_SIZE - border_width * 2, SURFACE)
         if index >= len(items):
             continue
         item = items[index]
-        game.icons[item.image].draw(left + 30, bottom + 33, 44, 44)
+        draw_item_icon(game, item.image, left + 30, bottom + 30, SLOT_SIZE, SLOT_SIZE, framed=False)
         if item.level is not None:
             fill_rect(left + 23, bottom + 2, 35, 20, INK)
             game.text(left + 27, bottom + 12, f'+{item.level}', 15, GOLD)
@@ -147,7 +152,7 @@ class StoragePanel:
             fill_rect(left, bottom, right - left, top - bottom, (36, 61, 70) if selected else SURFACE)
             if selected:
                 fill_rect(left, bottom, 3, top - bottom, CYAN)
-            game.icons[equipment.image].draw(left + 27, bottom + 23, 40, 40)
+            draw_item_icon(game, equipment.image, left + 27, bottom + 23, 40, 40)
             game.text(left + 53, bottom + 23, equipment.name, 18, CYAN if selected else CREAM)
             fill_rect(right - 43, bottom + 8, 38, 30, INK)
             game.text(right - 37, bottom + 23, str(len(state.storage_units[equipment.image])), 22, GOLD)
@@ -206,13 +211,13 @@ class MaterialStoragePanel:
             left, bottom, right, top = resource_slot_bounds(index)
             quantity = state.resource_storage[entry.image]
             hovered = contains((left, bottom, right, top), *game.mouse)
-            color = CYAN if quantity else BORDER
+            color = TIER_COLORS.get(ITEM_TIERS.get(entry.image), CYAN if quantity else BORDER)
             if hovered:
-                color = GOLD
+                fill_rect(left - 2, bottom - 2, right - left + 4, top - bottom + 4, GOLD)
             fill_rect(left, bottom, right - left, top - bottom, color)
             fill_rect(left + 2, bottom + 2, right - left - 4, top - bottom - 4, SURFACE)
             game.text(left - 12, top + 23, entry.name, 18)
-            game.icons[entry.image].draw(left + 48, bottom + 55, 64, 64)
+            draw_item_icon(game, entry.image, left + 48, bottom + 55, 64, 64, framed=False)
             fill_rect(left + 8, bottom + 4, 80, 27, INK)
             game.text(left + 19, bottom + 18, str(quantity), 22 if quantity < 10000 else 15, CYAN if quantity else MUTED)
         fill_rect(790, 220, 1, 310, BORDER)

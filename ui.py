@@ -5,6 +5,8 @@ import ctypes
 from pico2d import pico2d as p2
 import sdl2
 
+from workshop import EQUIPMENT, MATERIALS, PERSONAL_EQUIPMENT
+
 
 INK = (12, 24, 38)
 CREAM = (248, 239, 218)
@@ -14,10 +16,43 @@ GOLD = (244, 190, 101)
 RED = (255, 132, 132)
 
 
+TIER_COLORS = {
+    1: (245, 245, 245),
+    2: (174, 230, 93),
+    3: (80, 157, 255),
+    4: (255, 215, 80),
+}
+GEAR_IMAGES = tuple(entry.image for entry in (*EQUIPMENT, *PERSONAL_EQUIPMENT[:3]))
+ITEM_TIERS = {entry.image: 1 for entry in MATERIALS}
+ITEM_TIERS.update({image: int(image[-2:]) + 1 for image in GEAR_IMAGES})
+ITEM_CATEGORIES = {image: image.split('_')[1] for image in GEAR_IMAGES}
+CATEGORY_ICON_ASSETS = {category: f'ui_category_{category}.png'
+                        for category in ('drill', 'suit', 'oxygen')}
+
+
 def fill_rect(x, y, width, height, color, alpha=255):
     sdl2.SDL_SetRenderDrawColor(p2.renderer, *color, alpha)
     rectangle = p2.to_sdl_rect(x, y, width, height)
     sdl2.SDL_RenderFillRect(p2.renderer, ctypes.byref(rectangle))
+
+
+def draw_item_icon(game, image, x, y, width, height, framed=True):
+    """Draw the shared tier frame and top-right equipment category badge."""
+    tier = ITEM_TIERS.get(image)
+    is_item = tier is not None or image.startswith('item_')
+    left, bottom = x - width / 2, y - height / 2
+    if framed and is_item:
+        fill_rect(left, bottom, width, height, TIER_COLORS.get(tier, (61, 79, 93)))
+        fill_rect(left + 2, bottom + 2, width - 4, height - 4, INK)
+    padding = 8 if is_item else 0
+    game.icons[image].draw(x, y, width - padding, height - padding)
+    category = ITEM_CATEGORIES.get(image)
+    if category is not None:
+        size = max(12, min(28, round(min(width, height) * 0.3)))
+        badge_x = left + width - size / 2 - 2
+        badge_y = bottom + height - size / 2 - 2
+        fill_rect(badge_x - size / 2, badge_y - size / 2, size, size, INK)
+        game.category_icons[category].draw(badge_x, badge_y, size - 2, size - 2)
 
 
 def quantity_badge(game, x, y, value, label="", color=GOLD, width=100):

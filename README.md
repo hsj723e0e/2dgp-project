@@ -191,3 +191,28 @@ Space 또는 선택 확정 버튼으로 판매합니다. `2` 대여를 선택하
 배경과 주인공은 ImageGen 내장 도구로 제작했습니다. 배경에는 기존 에셋의 색감과
 공방 구성을 참조해 열린 바닥 공간을 가진 내려다보기 시점을 요청했습니다.
 주인공에는 초보 작업자 초상화의 작업복·고글 외형과 투명 배경의 4방향 걷기 시트를 요청했습니다.
+
+## 아이템 단계와 종류 표시
+
+| 단계 | 아이템 | 테두리 |
+| --- | --- | --- |
+| 1 | 재활용 부품·고급 복합소재·전자회로 | 흰색 |
+| 2 | 고철 드릴·보급형 우주복·소형 산소통 | 연두색 |
+| 3 | 합금 드릴·강화 우주복·순환형 산소통 | 파란색 |
+| 4 | 플라스마 드릴·첨단 탐사복·자급형 생명유지장치 | 노란색 |
+
+장비 아이콘 우측 상단의 작은 표시로 드릴·우주복·산소 공급장치를 구분합니다.
+가방과 보관함의 선택 표시는 단계 테두리 바깥에 별도 테두리로 표시합니다.
+인벤토리·보관함·제작·강화·주문·결과 화면에서 같은 표시를 사용합니다.
+
+종류 아이콘은 내장 ImageGen으로 생성한 투명 PNG를 64×64로 정규화했습니다.
+에셋은 `asset/ui_category_drill.png`, `asset/ui_category_suit.png`, `asset/ui_category_oxygen.png`입니다.
+생성에 사용한 공통 프롬프트와 종류별 subject는 다음과 같습니다.
+
+```text
+Use case: stylized-concept. Asset type: a tiny pixel-art item-category UI badge for a space workshop game. Create {subject}. One symbol centred on a square transparent canvas. Strong simple ivory-white silhouette with a dark navy pixel outline and minimal pale cyan shading, readable at 16 by 16 pixels. Crisp chunky pixel-art edges and only a few large shapes. The symbol occupies roughly 80 percent of the square. No text, no numbers, no letters, no frame, no disc, no scenery, no shadow outside the symbol. Deliver a PNG with genuine transparent background. Keep the visual design appropriate for a small top-right overlay on an existing equipment icon.
+
+drill subject = a single diagonally oriented spiral drill bit, recognizable corkscrew tip, compact silhouette
+suit subject = a single front-facing spacesuit torso with broad shoulders and a rounded helmet, clear compact astronaut suit silhouette
+oxygen subject = a single upright oxygen cylinder with a small valve and one short curved hose, clear compact life-support cylinder silhouette
+```

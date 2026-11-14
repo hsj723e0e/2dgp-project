@@ -6,7 +6,7 @@ import sdl2
 import sdl2.sdlttf
 
 from game_state import RECIPES
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
+from ui import draw_item_icon, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, WIDTH
 
 
@@ -148,7 +148,7 @@ class WorkbenchPanel:
         # Output sits above the ingredient slots, with the recipe browser on its right.
         fill_rect(386, 459, 136, 106, BORDER)
         fill_rect(387, 460, 134, 104, SURFACE)
-        game.icons[entry.image].draw(454, 512, 96, 96)
+        draw_item_icon(game, entry.image, 454, 512, 96, 96)
         for index, (material, required) in enumerate(recipe.ingredients.items()):
             left, bottom, right, top = slot_bounds(index)
             loaded = current_job or material in self.loaded_materials
@@ -159,7 +159,7 @@ class WorkbenchPanel:
             fill_rect(left + border_width, bottom + border_width,
                       right - left - border_width * 2, top - bottom - border_width * 2, SURFACE)
             game.text(left + 14, 378, f'재료 {index + 1}', 15, CYAN if loaded else MUTED)
-            game.icons[material].draw(left + 31, 343, 42, 42)
+            draw_item_icon(game, material, left + 31, 343, 42, 42)
             game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
             game.text(left + 178, 343, '×', 18, MUTED)
             fill_rect(left + 199, 325, 43, 35, (53, 45, 30))
@@ -193,7 +193,7 @@ class WorkbenchPanel:
                       (36, 61, 70) if selected else SURFACE)
             if selected or hovered:
                 fill_rect(left, bottom, 3, top - bottom, GOLD if selected else BORDER)
-            game.icons[item.image].draw(left + 28, bottom + 23, 40, 40)
+            draw_item_icon(game, item.image, left + 28, bottom + 23, 40, 40)
             game.text(left + 59, bottom + 23, item.name, 18, GOLD if selected else CREAM)
             fill_rect(1052, bottom + 8, 64, 30, INK)
             game.text(1061, bottom + 23, str(state.equipment[item.image]), 22, GOLD)
@@ -211,7 +211,7 @@ class WorkbenchPanel:
             hovered = contains(material_bounds(index), *game.mouse)
             fill_rect(left, bottom, right - left, top - bottom, BORDER if loaded or hovered else SURFACE)
             fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
-            game.icons[material].draw(left + 33, bottom + 34, 48, 48)
+            draw_item_icon(game, material, left + 33, bottom + 34, 48, 48)
             game.text(left + 68, bottom + 46, MATERIAL_NAMES[material], 18)
             game.text(left + 68, bottom + 19, '보유', 15, MUTED)
             fill_rect(left + 121, bottom + 5, 90, 29, INK)

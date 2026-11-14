@@ -5,7 +5,7 @@ import sdl2
 from customer_board import contains
 from game_state import MAX_ENHANCEMENT, PERSONAL_CHIP_COST, PERSONAL_CORE_COST, basic_upgrade_cost
 from inventory_panel import draw_grid, slot_bounds
-from ui import CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
+from ui import draw_item_icon, CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, PERSONAL_EQUIPMENT, WIDTH, HEIGHT
 
 
@@ -119,7 +119,7 @@ class EnhancementPanel:
             game.draw_button(ACTION, "코인으로 강화", False)
             return
         entry = next(entry for entry in EQUIPMENT if entry.image == unit.equipment)
-        game.icons[unit.equipment].draw(816, 428, 144, 144)
+        draw_item_icon(game, unit.equipment, 816, 428, 144, 144)
         game.text(654, 329, entry.name, 22)
         quantity_badge(game, 654, 279, f"+{unit.level}", "현재", CYAN, 144)
         maximum = unit.level == MAX_ENHANCEMENT
@@ -187,7 +187,7 @@ class EnhancementPanel:
             fill_rect(275, row_y - 24, 335, 48, (40, 68, 83) if selected else (20, 40, 56))
             if selected:
                 fill_rect(275, row_y - 24, 3, 48, CYAN)
-            game.icons[entry.image].draw(306, row_y, 42, 42)
+            draw_item_icon(game, entry.image, 306, row_y, 42, 42)
             game.text(339, row_y, entry.name, 18, CYAN if selected else MUTED)
             if self.mode == "materials":
                 quantity_badge(game, 536, row_y - 16, state.rewards[entry.image], width=64)
@@ -197,7 +197,7 @@ class EnhancementPanel:
                     game.text(538, row_y, "미보유", 15, MUTED)
                 else:
                     quantity_badge(game, 536, row_y - 16, f"+{level}", color=CYAN, width=64)
-        game.icons[self.entry.image].draw(816, 428, 144, 144)
+        draw_item_icon(game, self.entry.image, 816, 428, 144, 144)
         game.text(654, 329, self.entry.name, 22)
         if self.mode == "personal":
             self.draw_personal()

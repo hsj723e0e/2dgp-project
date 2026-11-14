@@ -3,7 +3,7 @@
 import sdl2
 
 from customer_board import contains
-from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
+from ui import draw_item_icon, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import HEIGHT, PERSONAL_EQUIPMENT, WIDTH
 
 
@@ -43,7 +43,7 @@ class SessionResults:
             color = CYAN if level is not None else MUTED
             fill_rect(x, 284, 230, 230, (20, 40, 56))
             fill_rect(x, 284, 3, 230, color)
-            game.icons[entry.image].draw(x + 115, 443, 112, 112)
+            draw_item_icon(game, entry.image, x + 115, 443, 112, 112)
             game.text(x + 14, 365, entry.name, 18)
             quantity_badge(game, x + 14, 316, "미보유" if level is None else f"+{level}", "강화", color, 202)
             if level is not None:

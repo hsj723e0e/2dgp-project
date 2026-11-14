@@ -16,7 +16,7 @@ from enhancement_panel import EnhancementPanel
 from session_results import SessionResults
 from game_state import GameState, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
+from ui import CATEGORY_ICON_ASSETS, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
@@ -58,6 +58,8 @@ class Game:
         self.button_disabled = p2.load_image(str(ASSETS / "ui_button_disabled.png"))
         image_names = {entry.image for station in STATIONS for entry in station.entries}
         self.icons = {name: p2.load_image(str(ASSETS / f"{name}.png")) for name in image_names}
+        self.category_icons = {category: p2.load_image(str(ASSETS / filename))
+                               for category, filename in CATEGORY_ICON_ASSETS.items()}
         self.fonts = load_fonts()
         self.player = Player()
         self.state = GameState(starter_equipment=True)
