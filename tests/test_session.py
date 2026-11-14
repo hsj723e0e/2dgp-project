@@ -50,6 +50,7 @@ class SessionClockTests(unittest.TestCase):
     def test_no_currency_inventory_or_progression_changes_after_deadline(self):
         now = [0.0]
         state = GameState(clock=lambda: now[0], session_duration=5)
+        state.equipment["eq_drill_01"] = 1
         state.apply_cheat()
         unit = state.available_units("eq_drill_01")[0]
         state.personal_equipment[PERSONAL_IDS[0]] = 0

@@ -1,0 +1,139 @@
+import unittest
+from unittest.mock import Mock
+
+from game_state import GameState, PERSONAL_IDS
+from orders import Order
+
+
+class InventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.now = 0.0
+        self.state = GameState(clock=lambda: self.now)
+
+    def test_materials_and_rewards_stack_but_each_equipment_has_its_own_slot(self):
+        self.state.materials["mat_01"] = 999
+        self.state.rewards["item_core"] = 12
+        self.state.add_equipment("eq_drill_01", 2)
+        items = self.state.inventory_items()
+        self.assertEqual(len(items), 4)
+        self.assertEqual(self.state.inventory_free, 5)
+        drills = [item for item in items if item.image == "eq_drill_01"]
+        self.assertEqual(len({item.unit_id for item in drills}), 2)
+        self.assertEqual(items[0].quantity, 999)
+
+    def test_full_bag_rejects_new_material_but_accepts_existing_stack(self):
+        self.state.materials["mat_01"] = 1
+        self.state.add_equipment("eq_drill_01", 8)
+        before = self.state.coins
+        self.assertFalse(self.state.purchase("mat_03", 1)[0])
+        self.assertEqual(self.state.coins, before)
+        self.assertTrue(self.state.purchase("mat_01", 2)[0])
+        self.assertEqual(self.state.materials["mat_01"], 3)
+        self.assertEqual(len(self.state.inventory_items()), 9)
+
+    def test_storage_preserves_identity_level_and_excludes_stored_items_from_orders(self):
+        self.state.add_equipment("eq_drill_01", 1)
+        unit = self.state.available_units("eq_drill_01")[0]
+        unit.level = 7
+        self.assertFalse(self.state.store_equipment("eq_suit_01", unit.identifier)[0])
+        self.assertEqual(self.state.equipment["eq_drill_01"], 1)
+        self.assertTrue(self.state.store_equipment("eq_drill_01", unit.identifier)[0])
+        self.state.current_order = Order(50, "npc_novice", (("eq_drill_01", 1),))
+        self.assertFalse(self.state.sell_order(50)[0])
+        self.assertFalse(self.state.start_rental(50)[0])
+        self.assertTrue(self.state.withdraw_equipment("eq_drill_01", unit.identifier)[0])
+        self.assertIs(self.state.available_units("eq_drill_01")[0], unit)
+        self.assertEqual(unit.level, 7)
+        self.assertTrue(self.state.sell_order(50, (unit.identifier,))[0])
+
+    def test_chest_capacity_and_full_bag_failures_keep_equipment_in_place(self):
+        for _ in range(28):
+            self.state.add_equipment("eq_drill_01", 1)
+            unit = self.state.available_units("eq_drill_01")[0]
+            self.assertTrue(self.state.store_equipment("eq_drill_01", unit.identifier)[0])
+        self.state.add_equipment("eq_drill_01", 9)
+        unit = self.state.available_units("eq_drill_01")[0]
+        stored = self.state.storage_units["eq_drill_01"][0]
+        self.assertFalse(self.state.store_equipment("eq_drill_01", unit.identifier)[0])
+        self.assertFalse(self.state.withdraw_equipment("eq_drill_01", stored.identifier)[0])
+        self.assertEqual(len(self.state.chest_items("eq_drill_01")), 28)
+        self.assertEqual(self.state.equipment["eq_drill_01"], 9)
+
+    def test_finished_craft_waits_and_enters_bag_once_a_slot_is_freed(self):
+        self.state.materials.update(mat_01=2, mat_03=1)
+        self.state.start_craft("eq_drill_01")
+        self.state.add_equipment("eq_suit_01", 9)
+        self.now = 10
+        self.assertIsNone(self.state.update_crafting())
+        self.assertTrue(self.state.ready_to_collect)
+        self.assertFalse(self.state.collect()[0])
+        self.assertEqual(self.state.collected_equipment_count, 0)
+        unit = self.state.available_units("eq_suit_01")[0]
+        self.state.store_equipment("eq_suit_01", unit.identifier)
+        self.assertEqual(self.state.update_crafting(), "eq_drill_01")
+        self.assertEqual(self.state.inventory_used, 9)
+        self.assertIsNone(self.state.update_crafting())
+        self.assertEqual(self.state.collected_equipment_count, 1)
+
+    def test_rental_return_waits_and_delivers_units_and_reward_without_reroll(self):
+        self.state.add_equipment("eq_drill_01", 1)
+        unit = self.state.available_units("eq_drill_01")[0]
+        unit.level = 4
+        self.state.current_order = Order(51, "npc_novice", (("eq_drill_01", 1),))
+        self.state.rng.random = Mock(return_value=0)
+        self.state.start_rental(51)
+        self.state.add_equipment("eq_suit_01", 9)
+        self.now = 25
+        self.state.update_rentals()
+        contract = self.state.rentals[0]
+        self.assertEqual(contract.status, "returning")
+        self.assertEqual(contract.returned_count, 0)
+        for expected in ("returning", "success"):
+            suit = self.state.available_units("eq_suit_01")[0]
+            self.state.store_equipment("eq_suit_01", suit.identifier)
+            self.state.update_rentals()
+            self.assertEqual(contract.status, expected)
+        self.assertIs(self.state.available_units("eq_drill_01")[0], unit)
+        self.assertEqual(unit.level, 4)
+        self.assertEqual(self.state.rewards["item_chip"], 1)
+        self.state.update_rentals()
+        self.assertEqual(self.state.rewards["item_chip"], 1)
+        self.assertEqual(self.state.rng.random.call_count, 1)
+        self.assertEqual(self.state.inventory_used, 9)
+
+    def test_staging_reserves_space_for_cancelled_ingredients(self):
+        self.state.materials.update(mat_01=2, mat_03=1)
+        self.state.add_equipment("eq_suit_01", 7)
+        self.state.stage_craft_material("eq_drill_01", "mat_01")
+        self.assertEqual(self.state.inventory_free, 0)
+        self.assertFalse(self.state.add_equipment("eq_drill_01", 1))
+        self.state.clear_craft_materials()
+        self.assertEqual(self.state.materials["mat_01"], 2)
+        self.assertEqual(self.state.inventory_used, 9)
+
+    def test_personal_equipment_does_not_overfill_bag_when_core_stack_remains(self):
+        self.state.rewards["item_core"] = 13
+        self.state.add_equipment("eq_drill_01", 8)
+        self.assertFalse(self.state.craft_personal(PERSONAL_IDS[0])[0])
+        self.assertEqual(self.state.rewards["item_core"], 13)
+        self.state.rewards["item_core"] = 12
+        self.assertTrue(self.state.craft_personal(PERSONAL_IDS[0])[0])
+        self.assertEqual(self.state.inventory_used, 9)
+
+    def test_session_result_includes_pending_returns_and_freezes_delivery(self):
+        self.state.add_equipment("eq_drill_01", 1)
+        self.state.current_order = Order(52, "npc_novice", (("eq_drill_01", 1),))
+        self.state.rng.random = Mock(return_value=0)
+        self.state.start_rental(52)
+        self.state.add_equipment("eq_suit_01", 9)
+        self.now = self.state.session_end_at
+        result = self.state.finish_session()
+        self.assertEqual(result.pending_rentals, 1)
+        self.assertEqual(self.state.rentals[0].status, "returning")
+        self.state.equipment["eq_suit_01"] = 0
+        self.state.update_rentals()
+        self.assertEqual(self.state.equipment["eq_drill_01"], 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

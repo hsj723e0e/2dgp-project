@@ -54,6 +54,8 @@ class RentalContract:
     reward_amount: int
     status: str = "active"
     units: tuple = ()
+    returned_count: int = 0
+    received_reward: int = 0
 
 
 def create_order(identifier, customer, rng):

@@ -46,6 +46,9 @@ class RentalTests(unittest.TestCase):
                 self.assertEqual(self.state.equipment, inventory)
                 self.assertEqual(self.state.coins, expected_coins)
                 self.assertEqual(self.state.rewards, rewards)
+                for equipment in self.state.equipment:
+                    for unit in self.state.available_units(equipment):
+                        self.assertTrue(self.state.store_equipment(equipment, unit.identifier)[0])
         self.assertEqual(self.state.rng.random.call_count, 4)
 
     def test_failure_loses_only_rented_items_and_never_awards_rewards(self):

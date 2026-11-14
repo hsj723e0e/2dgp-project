@@ -20,6 +20,8 @@ PERSONAL_CORE_COST = 12
 PERSONAL_CHIP_COST = 3
 PERSONAL_IDS = tuple(entry.image for entry in PERSONAL_EQUIPMENT[:3])
 SESSION_DURATION = 20 * 60
+INVENTORY_CAPACITY = 9
+CHEST_CAPACITY = 28
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,14 @@ class EquipmentUnit:
 
 
 @dataclass(frozen=True)
+class InventoryItem:
+    image: str
+    quantity: int = 1
+    level: int | None = None
+    unit_id: int | None = None
+
+
+@dataclass(frozen=True)
 class SessionResult:
     personal_levels: tuple
     coins: int
@@ -80,6 +90,7 @@ class GameState:
         self.materials = {name: 0 for name in MATERIAL_PRICES}
         self.equipment = {entry.image: 0 for entry in EQUIPMENT}
         self.equipment_units = {entry.image: [] for entry in EQUIPMENT}
+        self.storage_units = {entry.image: [] for entry in EQUIPMENT}
         self.next_unit_id = 1
         self.job = None
         self.staged_equipment = None
@@ -123,7 +134,7 @@ class GameState:
                 sold_orders=self.sold_order_count,
                 rental_successes=sum(contract.status == "success" for contract in self.rentals),
                 rental_losses=sum(contract.status == "lost" for contract in self.rentals),
-                pending_rentals=sum(contract.status == "active" for contract in self.rentals),
+                pending_rentals=sum(contract.status in ("active", "returning") for contract in self.rentals),
                 collected_equipment=self.collected_equipment_count,
             )
         return self.result
@@ -131,28 +142,93 @@ class GameState:
     def apply_cheat(self):
         if self.session_over:
             return
-        self.clear_craft_materials()
         self.coins = 999
-        for inventory in (self.materials, self.equipment, self.rewards):
-            for item in inventory:
-                inventory[item] = 999
-        for equipment in self.equipment:
-            self.available_units(equipment)
+
+    @property
+    def inventory_used(self):
+        material_slots = sum(quantity > 0 or self.staged_materials.get(image, 0) > 0
+                             for image, quantity in self.materials.items())
+        return (material_slots + sum(quantity > 0 for quantity in self.rewards.values())
+                + sum(self.equipment.values())
+                + sum(level is not None for level in self.personal_equipment.values()))
+
+    @property
+    def inventory_free(self):
+        # Staged ingredients retain their space until crafting starts, so cancellation always fits.
+        return max(0, INVENTORY_CAPACITY - self.inventory_used)
+
+    def inventory_items(self):
+        items = []
+        for image, quantity in self.materials.items():
+            if quantity > 0:
+                items.append(InventoryItem(image, quantity))
+        for image in self.equipment:
+            items.extend(InventoryItem(image, level=unit.level, unit_id=unit.identifier)
+                         for unit in self.available_units(image))
+        for image, quantity in self.rewards.items():
+            if quantity > 0:
+                items.append(InventoryItem(image, quantity))
+        for image, level in self.personal_equipment.items():
+            if level is not None:
+                items.append(InventoryItem(image, level=level))
+        return tuple(items)
+
+    def chest_items(self, equipment):
+        return tuple(InventoryItem(unit.equipment, level=unit.level, unit_id=unit.identifier)
+                     for unit in self.storage_units[equipment])
+
+    def store_equipment(self, equipment, unit_id):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
+        if equipment not in self.storage_units:
+            return False, "존재하지 않는 보관함입니다."
+        unit = next((unit for unit in self.available_units(equipment)
+                     if unit.identifier == unit_id), None)
+        if unit is None:
+            return False, "선택한 종류의 장비만 보관할 수 있습니다."
+        if len(self.storage_units[equipment]) >= CHEST_CAPACITY:
+            return False, "보관함 28칸이 가득 찼습니다."
+        self.take_units((unit,))
+        self.storage_units[equipment].append(unit)
+        return True, "장비를 보관했습니다."
+
+    def withdraw_equipment(self, equipment, unit_id):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
+        if equipment not in self.storage_units:
+            return False, "존재하지 않는 보관함입니다."
+        unit = next((unit for unit in self.storage_units[equipment]
+                     if unit.identifier == unit_id), None)
+        if unit is None:
+            return False, "꺼낼 장비가 없습니다."
+        if not self.return_units((unit,)):
+            return False, "가방 9칸이 가득 찼습니다."
+        self.storage_units[equipment].remove(unit)
+        return True, "장비를 가방으로 옮겼습니다."
+
+    def new_equipment_unit(self, equipment):
+        unit = EquipmentUnit(self.next_unit_id, equipment)
+        self.next_unit_id += 1
+        return unit
 
     def available_units(self, equipment):
         units = self.equipment_units[equipment]
         count = self.equipment[equipment]
         # Count-only inventories created by earlier callers become +0 units.
         while len(units) < count:
-            units.append(EquipmentUnit(self.next_unit_id, equipment))
-            self.next_unit_id += 1
+            units.append(self.new_equipment_unit(equipment))
         del units[count:]
         return tuple(units)
 
     def add_equipment(self, equipment, quantity):
+        if equipment not in self.equipment or type(quantity) is not int or quantity < 0:
+            return False
+        if quantity > self.inventory_free:
+            return False
         self.available_units(equipment)
         self.equipment[equipment] += quantity
         self.available_units(equipment)
+        return True
 
     def order_units(self, order, unit_ids=None):
         available = {}
@@ -178,10 +254,13 @@ class GameState:
             self.equipment[unit.equipment] -= 1
 
     def return_units(self, units):
+        if len(units) > self.inventory_free:
+            return False
         for unit in units:
             self.available_units(unit.equipment)
             self.equipment_units[unit.equipment].append(unit)
             self.equipment[unit.equipment] += 1
+        return True
 
     def basic_upgrade_status(self, equipment, unit_id):
         if self.session_over:
@@ -215,6 +294,8 @@ class GameState:
             return False, "이미 보유한 개인 장비입니다."
         if self.rewards["item_core"] < PERSONAL_CORE_COST:
             return False, "고출력 코어가 부족합니다."
+        if self.inventory_free == 0 and self.rewards["item_core"] > PERSONAL_CORE_COST:
+            return False, "개인 장비를 넣을 가방 공간이 부족합니다."
         return True, ""
 
     def craft_personal(self, equipment):
@@ -400,23 +481,37 @@ class GameState:
         return True, "대여를 시작했습니다. 대여 현황에서 결과를 확인하세요."
 
     def update_rentals(self):
+        if self.result is not None:
+            return
         now = self.effective_time
         for contract in self.rentals:
-            if contract.status != "active" or now < contract.due_at:
+            if contract.status == "active" and now >= contract.due_at:
+                if self.rng.random() >= contract.success_probability:
+                    contract.status = "lost"
+                    continue
+                contract.status = "returning"
+                if not contract.units:
+                    contract.units = tuple(self.new_equipment_unit(equipment)
+                                           for equipment, quantity in contract.order.requirements
+                                           for _ in range(quantity))
+            if contract.status != "returning":
                 continue
-            if self.rng.random() < contract.success_probability:
-                if contract.units:
-                    self.return_units(contract.units)
-                else:
-                    for equipment, quantity in contract.order.requirements:
-                        self.add_equipment(equipment, quantity)
-                if contract.reward_item == "coins":
-                    self.coins += contract.reward_amount
-                else:
-                    self.rewards[contract.reward_item] += contract.reward_amount
-                contract.status = "success"
+            count = min(self.inventory_free, len(contract.units) - contract.returned_count)
+            units = contract.units[contract.returned_count:contract.returned_count + count]
+            self.return_units(units)
+            contract.returned_count += count
+            if contract.returned_count < len(contract.units):
+                continue
+            remaining_reward = contract.reward_amount - contract.received_reward
+            if contract.reward_item == "coins":
+                self.coins += remaining_reward
+                contract.received_reward += remaining_reward
             else:
-                contract.status = "lost"
+                if self.rewards[contract.reward_item] > 0 or self.inventory_free > 0:
+                    self.rewards[contract.reward_item] += remaining_reward
+                    contract.received_reward += remaining_reward
+            if contract.received_reward == contract.reward_amount:
+                contract.status = "success"
 
     def purchase_status(self, material, quantity):
         if self.session_over:
@@ -428,6 +523,8 @@ class GameState:
         cost = MATERIAL_PRICES[material] * quantity
         if self.coins < cost:
             return False, "코인이 부족합니다."
+        if self.materials[material] == 0 and material not in self.staged_materials and self.inventory_free == 0:
+            return False, "가방의 빈칸이 부족합니다."
         return True, ""
 
     def purchase(self, material, quantity):
@@ -485,7 +582,7 @@ class GameState:
             return False, "제작할 수 없는 장비입니다."
         if self.job is not None:
             if self.ready_to_collect:
-                return False, "완성품을 먼저 회수하세요."
+                return False, "가방을 비우면 완성품이 자동으로 회수됩니다."
             return False, "작업대에서 장비를 제작 중입니다."
         ingredients = RECIPES[equipment].ingredients
         staged = self.staged_materials if self.staged_equipment == equipment else {}
@@ -516,7 +613,8 @@ class GameState:
             return False, "회수할 완성품이 없습니다."
         if not self.ready_to_collect:
             return False, "아직 제작 중입니다."
-        self.update_crafting()
+        if self.update_crafting() is None:
+            return False, "가방이 가득 찼습니다. 빈칸이 생기면 자동 회수됩니다."
         return True, "완성된 장비 1개를 회수했습니다."
 
     def update_crafting(self):
@@ -526,7 +624,8 @@ class GameState:
         if self.job.ready_at > self.effective_time:
             return None
         equipment = self.job.equipment
-        self.add_equipment(equipment, 1)
+        if not self.add_equipment(equipment, 1):
+            return None
         self.collected_equipment_count += 1
         self.job = None
         return equipment
