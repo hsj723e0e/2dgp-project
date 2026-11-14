@@ -70,11 +70,14 @@ PERSONAL_EQUIPMENT = (
 )
 
 
+RESOURCE_ITEMS = MATERIALS + PERSONAL_EQUIPMENT[3:]
+
+
 STATIONS = (
     Station("작업대", 290, 345,
             "필요 재료를 조합 슬롯에 넣고 제작하세요. 완성품은 자동 회수됩니다.", EQUIPMENT),
     Station("재료 보관대", 255, 230,
-            "수량을 선택하고 코인으로 기본 재료를 구매하세요.", MATERIALS),
+            "재료와 보상을 종류별 한 칸에 합쳐 보관하세요.", RESOURCE_ITEMS),
     Station("주문 게시판", 640, 360,
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,

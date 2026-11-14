@@ -9,20 +9,18 @@ from time import perf_counter
 from pico2d import pico2d as p2
 import sdl2
 
-from inventory_panel import InventoryPanel, StoragePanel
+from inventory_panel import InventoryPanel, MaterialStoragePanel, StoragePanel
 from workbench_panel import WorkbenchPanel
 from customer_board import CustomerBoard
 from enhancement_panel import EnhancementPanel
 from session_results import SessionResults
-from game_state import GameState, MATERIAL_PRICES, RECIPES
+from game_state import GameState, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
+from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
-CLOSE_BUTTON = (280, 116, 520, 180)
-ACTION_BUTTON = (708, 116, 948, 180)
 
 
 def load_fonts():
@@ -68,11 +66,11 @@ class Game:
         self.inventory_open = False
         self.selected_entry = 0
         self.mouse = (0, 0)
-        self.purchase_quantity = 1
         self.feedback = ""
         self.feedback_success = True
         self.inventory_panel = InventoryPanel(self)
         self.storage_panel = StoragePanel(self)
+        self.material_storage_panel = MaterialStoragePanel(self)
         self.workbench_panel = WorkbenchPanel(self)
         self.customer_board = CustomerBoard(self)
         self.enhancement_panel = EnhancementPanel(self)
@@ -87,7 +85,6 @@ class Game:
         self.active_station = None
         self.inventory_open = False
         self.selected_entry = 0
-        self.purchase_quantity = 1
         self.feedback = ""
         self.feedback_success = True
         self.mouse = (0, 0)
@@ -107,7 +104,6 @@ class Game:
         if selected != self.selected_entry and self.active_station.name == "작업대":
             self.workbench_panel.reset()
         self.selected_entry = selected
-        self.purchase_quantity = 1
         self.feedback = ""
 
     def interact(self):
@@ -120,7 +116,6 @@ class Game:
             self.player.moving = False
             self.player.walk_time = 0.0
         self.selected_entry = 0
-        self.purchase_quantity = 1
         self.feedback = ""
         if self.active_station:
             self.player.moving = False
@@ -163,17 +158,6 @@ class Game:
                     self.enhancement_panel.handle_key(event.key)
                 elif self.active_station and self.active_station.name == "작업대":
                     self.workbench_panel.handle_key(event.key)
-                elif self.active_station:
-                    if event.key in (sdl2.SDLK_UP, sdl2.SDLK_w):
-                        self.select_entry(self.selected_entry - 1)
-                    elif event.key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
-                        self.select_entry(self.selected_entry + 1)
-                    elif event.key == sdl2.SDLK_LEFT:
-                        self.change_quantity(-1)
-                    elif event.key == sdl2.SDLK_RIGHT:
-                        self.change_quantity(1)
-                    elif event.key == sdl2.SDLK_SPACE:
-                        self.perform_action()
             elif event.type == sdl2.SDL_MOUSEMOTION:
                 self.mouse = (event.x, HEIGHT - event.y)
             elif event.type == sdl2.SDL_MOUSEBUTTONDOWN and event.button == sdl2.SDL_BUTTON_LEFT:
@@ -198,47 +182,16 @@ class Game:
         if self.active_station.name == "강화 장치":
             self.enhancement_panel.handle_click(x, y)
             return
-        left, bottom, right, top = CLOSE_BUTTON
-        if left <= x <= right and bottom <= y <= top:
-            self.close_panel()
-        elif ACTION_BUTTON[0] <= x <= ACTION_BUTTON[2] and ACTION_BUTTON[1] <= y <= ACTION_BUTTON[3]:
-            self.perform_action()
-        elif 708 <= x <= 748 and 215 <= y <= 243:
-            self.change_quantity(-1)
-        elif 908 <= x <= 948 and 215 <= y <= 243:
-            self.change_quantity(1)
-        elif 275 <= x <= 610:
-            for index in range(len(self.active_station.entries)):
-                row_y = 478 - index * 52
-                if row_y - 24 <= y <= row_y + 24:
-                    self.select_entry(index)
-                    break
-
-    def change_quantity(self, amount):
-        if self.active_station.name != "재료 보관대":
-            return
-        entry = self.active_station.entries[self.selected_entry]
-        maximum = max(1, self.state.coins // MATERIAL_PRICES[entry.image])
-        self.purchase_quantity = max(1, min(maximum, self.purchase_quantity + amount))
-        self.feedback = ""
+        if self.active_station.name == "재료 보관대":
+            self.material_storage_panel.handle_click(x, y)
 
     def panel_action(self):
-        if self.active_station.name == "재료 보관대":
-            entry = self.active_station.entries[self.selected_entry]
-            available, reason = self.state.purchase_status(entry.image, self.purchase_quantity)
-            cost = MATERIAL_PRICES[entry.image] * self.purchase_quantity
-            return f"{cost} 코인 구매", available, reason
         if self.active_station.name == "작업대":
             return self.workbench_panel.action_status()
         return None
 
     def perform_action(self):
-        if self.active_station.name == "재료 보관대":
-            entry = self.active_station.entries[self.selected_entry]
-            self.feedback_success, self.feedback = self.state.purchase(entry.image, self.purchase_quantity)
-            if self.feedback_success:
-                self.purchase_quantity = 1
-        elif self.active_station.name == "작업대":
+        if self.active_station.name == "작업대":
             self.workbench_panel.start_craft()
 
     def draw_button(self, bounds, label, enabled=True, selected=False):
@@ -308,49 +261,8 @@ class Game:
         if station.name == "강화 장치":
             self.enhancement_panel.draw()
             return
-        fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
-        self.draw_panel_frame()
-        self.text(278, 572, station.name, 30)
-        self.text(278, 534, station.subtitle, 18, MUTED)
-        fill_rect(275, 510, 730, 2, (61, 87, 103))
-        for index, entry in enumerate(station.entries):
-            row_y = 478 - index * 52
-            selected = index == self.selected_entry
-            fill_rect(275, row_y - 24, 335, 48, (40, 68, 83) if selected else (20, 40, 56))
-            if selected:
-                fill_rect(275, row_y - 24, 3, 48, CYAN)
-            self.icons[entry.image].draw(306, row_y, 42, 42)
-            self.text(339, row_y, entry.name, 18, CYAN if selected else CREAM)
-            if station.name == "강화 장치" and entry.image in self.state.rewards:
-                quantity_badge(self, 536, row_y - 16, self.state.rewards[entry.image], color=GOLD, width=64)
-
-        entry = station.entries[self.selected_entry]
-        self.icons[entry.image].draw(816, 428, 144, 144)
-        self.text(654, 329, entry.name, 22)
-        lines = entry.description.split(" · ")
-        for index, line in enumerate(lines):
-            self.text(654, 300 - index * 22, line, 15, MUTED)
         if station.name == "재료 보관대":
-            price = MATERIAL_PRICES[entry.image]
-            owned = self.state.materials[entry.image]
-            quantity_badge(self, 654, 244, owned, "보유", CYAN, 144)
-            self.text(818, 255, f"단가 {price} 코인", 18, GOLD)
-            fill_rect(708, 215, 40, 28, (40, 68, 83))
-            fill_rect(908, 215, 40, 28, (40, 68, 83))
-            self.text(722, 229, "-")
-            self.text(921, 229, "+")
-            quantity_badge(self, 759, 208, self.purchase_quantity, "구매", GOLD, 138)
-        elif station.name == "강화 장치" and entry.image in self.state.rewards:
-            quantity_badge(self, 654, 244, self.state.rewards[entry.image], "보유", CYAN, 168)
-        self.draw_button(CLOSE_BUTTON, "돌아가기")
-        action = self.panel_action()
-        if action:
-            label, available, reason = action
-            self.draw_button(ACTION_BUTTON, label, available)
-            if reason and not self.feedback:
-                self.text(654, 191, reason, 15, GOLD)
-        if self.feedback:
-            self.text(654, 191, self.feedback, 15, CYAN if self.feedback_success else GOLD)
+            self.material_storage_panel.draw()
 
     def draw_crafting_status(self):
         if self.state.job is None:
@@ -420,7 +332,7 @@ class Game:
             if self.active_station.name == "장비 진열대":
                 controls = "↑ ↓ 보관함 선택   장비 클릭 보관 / 꺼내기   E / ESC 닫기"
             elif self.active_station.name == "재료 보관대":
-                controls = "↑ ↓ 선택   ← → 수량   SPACE 구매   E / ESC 닫기"
+                controls = "가방 재료 클릭 보관   보관 칸 클릭 꺼내기   E / ESC 닫기"
             elif self.active_station.name == "작업대":
                 controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2 투입   SPACE 제작   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":

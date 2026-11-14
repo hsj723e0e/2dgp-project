@@ -102,6 +102,7 @@ class GameState:
         self.market_tip = None
         self.market_tip_period = None
         self.rewards = {"item_chip": 0, "item_core": 0, "item_secret": 0}
+        self.resource_storage = {image: 0 for image in (*self.materials, *self.rewards)}
         self.personal_equipment = {equipment: None for equipment in PERSONAL_IDS}
         self.rentals = []
         self.current_order = create_order(1, "npc_novice", self.rng)
@@ -226,6 +227,34 @@ class GameState:
             return False, "가방 9칸이 가득 찼습니다."
         self.storage_units[equipment].remove(unit)
         return True, "장비를 가방으로 옮겼습니다."
+
+    def store_resource(self, image):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
+        if image not in self.resource_storage:
+            return False, "재료와 보상 아이템만 보관할 수 있습니다."
+        inventory = self.materials if image in self.materials else self.rewards
+        quantity = inventory[image]
+        if quantity == 0:
+            return False, "보관할 아이템이 없습니다."
+        self.resource_storage[image] += quantity
+        inventory[image] = 0
+        return True, f"{quantity}개를 보관했습니다."
+
+    def withdraw_resource(self, image):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
+        if image not in self.resource_storage:
+            return False, "재료와 보상 아이템만 꺼낼 수 있습니다."
+        quantity = self.resource_storage[image]
+        if quantity == 0:
+            return False, "꺼낼 아이템이 없습니다."
+        inventory = self.materials if image in self.materials else self.rewards
+        if inventory[image] == 0 and image not in self.staged_materials and self.inventory_free == 0:
+            return False, "가방 9칸이 가득 찼습니다."
+        inventory[image] += quantity
+        self.resource_storage[image] = 0
+        return True, f"{quantity}개를 가방으로 옮겼습니다."
 
     def new_equipment_unit(self, equipment):
         unit = EquipmentUnit(self.next_unit_id, equipment)

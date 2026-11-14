@@ -3,7 +3,7 @@
 import sdl2
 
 from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
-from workshop import EQUIPMENT, HEIGHT, MATERIALS, PERSONAL_EQUIPMENT, WIDTH
+from workshop import EQUIPMENT, HEIGHT, MATERIALS, PERSONAL_EQUIPMENT, RESOURCE_ITEMS, WIDTH
 
 
 ITEM_NAMES = {entry.image: entry.name for entry in (*EQUIPMENT, *MATERIALS, *PERSONAL_EQUIPMENT)}
@@ -167,3 +167,60 @@ class StoragePanel:
                 game.text(650, 185, f'강화 +{hovered.level}', 18, GOLD)
         if game.feedback:
             game.text(394, 143, game.feedback, 18, CYAN if game.feedback_success else RED)
+
+
+def resource_slot_bounds(index):
+    left = 158 + (index % 3) * 184
+    top = 500 - (index // 3) * 164
+    return (left, top - 96, left + 96, top)
+
+
+class MaterialStoragePanel:
+    def __init__(self, game):
+        self.game = game
+
+    def handle_click(self, x, y):
+        game = self.game
+        if contains(CLOSE_STORAGE, x, y):
+            game.close_panel()
+            return
+        for index, entry in enumerate(RESOURCE_ITEMS):
+            if contains(resource_slot_bounds(index), x, y):
+                game.feedback_success, game.feedback = game.state.withdraw_resource(entry.image)
+                return
+        for index, item in enumerate(game.state.inventory_items()):
+            if contains(slot_bounds(STORAGE_BAG_ORIGIN, index, 3), x, y):
+                game.feedback_success, game.feedback = game.state.store_resource(item.image)
+                return
+
+    def draw(self):
+        game, state = self.game, self.game.state
+        bag = state.inventory_items()
+        fill_rect(0, 44, WIDTH, HEIGHT - 44, INK, 190)
+        fill_rect(90, 90, 1100, 545, BORDER)
+        fill_rect(91, 91, 1098, 543, INK)
+        game.text(116, 591, '재료 보관대', 30)
+        game.draw_button(CLOSE_STORAGE, '닫기')
+        fill_rect(116, 551, 1039, 1, BORDER)
+        for index, entry in enumerate(RESOURCE_ITEMS):
+            left, bottom, right, top = resource_slot_bounds(index)
+            quantity = state.resource_storage[entry.image]
+            hovered = contains((left, bottom, right, top), *game.mouse)
+            color = CYAN if quantity else BORDER
+            if hovered:
+                color = GOLD
+            fill_rect(left, bottom, right - left, top - bottom, color)
+            fill_rect(left + 2, bottom + 2, right - left - 4, top - bottom - 4, SURFACE)
+            game.text(left - 12, top + 23, entry.name, 18)
+            game.icons[entry.image].draw(left + 48, bottom + 55, 64, 64)
+            fill_rect(left + 8, bottom + 4, 80, 27, INK)
+            game.text(left + 19, bottom + 18, str(quantity), 22 if quantity < 10000 else 15, CYAN if quantity else MUTED)
+        fill_rect(790, 220, 1, 310, BORDER)
+        game.text(878, 530, '가방', 22)
+        game.text(1001, 530, f'{len(bag)} / 9', 18, GOLD)
+        hovered = draw_grid(game, STORAGE_BAG_ORIGIN, bag, 3, 3)
+        if hovered:
+            game.text(878, 280, ITEM_NAMES[hovered.image], 18)
+        game.text(158, 195, '아이템 클릭 · 보관함 ↔ 가방 묶음 이동', 18, MUTED)
+        if game.feedback:
+            game.text(158, 143, game.feedback, 18, CYAN if game.feedback_success else RED)
