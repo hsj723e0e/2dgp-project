@@ -1,7 +1,8 @@
-"""Workbench recipe browser and crafting status panel."""
+"""Recipe selection, ingredient staging, and the workshop crafting screen."""
 
 import ctypes
 
+import sdl2
 import sdl2.sdlttf
 
 from game_state import RECIPES
@@ -9,121 +10,211 @@ from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, WIDTH
 
 
-CLOSE_BUTTON = (1034, 586, 1094, 624)
-ACTION_BUTTON = (816, 108, 1088, 158)
-SURFACE = (21, 37, 50)
-BORDER = (53, 76, 90)
+CLOSE_BUTTON = (1068, 585, 1128, 623)
+ACTION_BUTTON = (334, 228, 594, 268)
+SURFACE = (23, 38, 51)
+BORDER = (61, 79, 93)
+MATERIAL_NAMES = {entry.image: entry.name for entry in MATERIALS}
+
+
+def contains(bounds, x, y):
+    left, bottom, right, top = bounds
+    return left <= x <= right and bottom <= y <= top
+
+
+def recipe_bounds(index):
+    top = 531 - index * 52
+    return (786, top - 46, 1128, top)
+
+
+def material_bounds(index):
+    left = 168 + index * 316
+    return (left, 104, left + 300, 170)
+
+
+def slot_bounds(index):
+    left = 260 + index * 204
+    return (left, 310, left + 180, 397)
 
 
 class WorkbenchPanel:
     def __init__(self, game):
         self.game = game
+        self.loaded_materials = set()
+
+    def reset(self):
+        self.loaded_materials.clear()
+
+    def ingredients(self):
+        entry = EQUIPMENT[self.game.selected_entry]
+        return RECIPES[entry.image].ingredients
+
+    def load_material(self, material):
+        game = self.game
+        if game.state.job is not None or material not in self.ingredients():
+            return
+        required = self.ingredients()[material]
+        if game.state.materials[material] < required:
+            game.feedback_success = False
+            game.feedback = f'{MATERIAL_NAMES[material]}이 부족합니다.'
+            return
+        self.loaded_materials.add(material)
+        game.feedback = ''
+
+    def action_status(self):
+        game = self.game
+        entry = EQUIPMENT[game.selected_entry]
+        if game.state.job is not None:
+            return '제작 중', False, ''
+        available, reason = game.state.craft_status(entry.image)
+        if not available:
+            return '제작', False, reason
+        if not self.loaded_materials.issuperset(self.ingredients()):
+            return '제작', False, '아래 필요 재료를 클릭해 조합 슬롯에 넣으세요.'
+        return '제작', True, ''
+
+    def start_craft(self):
+        _, available, reason = self.action_status()
+        if not available:
+            self.game.feedback_success = False
+            self.game.feedback = reason
+            return
+        entry = EQUIPMENT[self.game.selected_entry]
+        self.game.feedback_success, self.game.feedback = self.game.state.start_craft(entry.image)
+
+    def handle_key(self, key):
+        game = self.game
+        if key in (sdl2.SDLK_UP, sdl2.SDLK_w):
+            game.select_entry(game.selected_entry - 1)
+        elif key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
+            game.select_entry(game.selected_entry + 1)
+        elif key in (sdl2.SDLK_1, sdl2.SDLK_2):
+            index = key - sdl2.SDLK_1
+            materials = tuple(self.ingredients())
+            if index < len(materials):
+                self.load_material(materials[index])
+        elif key == sdl2.SDLK_SPACE:
+            self.start_craft()
 
     def handle_click(self, x, y):
-        if CLOSE_BUTTON[0] <= x <= CLOSE_BUTTON[2] and CLOSE_BUTTON[1] <= y <= CLOSE_BUTTON[3]:
-            self.game.close_panel()
-        elif ACTION_BUTTON[0] <= x <= ACTION_BUTTON[2] and ACTION_BUTTON[1] <= y <= ACTION_BUTTON[3]:
-            if self.game.panel_action()[1]:
-                self.game.perform_action()
-        elif 192 <= x <= 524:
-            for index in range(len(EQUIPMENT)):
-                top = 527 - index * 52
-                if top - 46 <= y <= top:
-                    self.game.select_entry(index)
-                    break
+        game = self.game
+        if contains(CLOSE_BUTTON, x, y):
+            game.close_panel()
+            return
+        if contains(ACTION_BUTTON, x, y):
+            self.start_craft()
+            return
+        for index in range(len(EQUIPMENT)):
+            if contains(recipe_bounds(index), x, y):
+                game.select_entry(index)
+                return
+        for index, material in enumerate(self.ingredients()):
+            if contains(material_bounds(index), x, y):
+                self.load_material(material)
+                return
+            if contains(slot_bounds(index), x, y) and game.state.job is None:
+                self.loaded_materials.discard(material)
+                game.feedback = ''
+                return
 
     def button(self, bounds, label, enabled=True, primary=False):
         game = self.game
         left, bottom, right, top = bounds
-        hovered = left <= game.mouse[0] <= right and bottom <= game.mouse[1] <= top
-        color = CYAN if primary and enabled else BORDER
-        fill_rect(left, bottom, right - left, top - bottom, color)
-        background = (38, 83, 83) if hovered and enabled else (27, 57, 63)
+        hovered = contains(bounds, *game.mouse)
+        fill_rect(left, bottom, right - left, top - bottom, GOLD if primary and enabled else BORDER)
+        background = (91, 73, 40) if hovered and enabled else (61, 51, 34)
         if not primary or not enabled:
             background = (42, 59, 72) if hovered and enabled else SURFACE
         fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, background)
-        # Keep button labels centred using the actual Korean font width.
         width, height = ctypes.c_int(), ctypes.c_int()
         sdl2.sdlttf.TTF_SizeUTF8(game.fonts[18].font, label.encode('utf-8'),
                                ctypes.byref(width), ctypes.byref(height))
         game.text((left + right - width.value) / 2, (bottom + top) / 2,
-                  label, 18, CREAM if enabled else MUTED)
+                  label, 18, GOLD if primary and enabled else MUTED)
 
     def draw(self):
         game = self.game
         state = game.state
         entry = EQUIPMENT[game.selected_entry]
         recipe = RECIPES[entry.image]
+        current_job = state.job is not None and state.job.equipment == entry.image
         fill_rect(0, 44, WIDTH, HEIGHT - 44, INK, 200)
-        fill_rect(169, 77, 950, 560, (4, 12, 20), 180)
-        fill_rect(164, 84, 952, 558, BORDER)
-        fill_rect(165, 85, 950, 556, INK)
-        fill_rect(165, 574, 950, 67, SURFACE)
-        fill_rect(192, 595, 4, 25, CYAN)
-        game.text(212, 609, '작업대', 30)
-        game.text(360, 607, '장비 제작', 18, MUTED)
+        fill_rect(130, 72, 1032, 562, (4, 12, 20), 180)
+        fill_rect(124, 78, 1032, 562, BORDER)
+        fill_rect(125, 79, 1030, 560, INK)
+        fill_rect(125, 574, 1030, 65, SURFACE)
+        fill_rect(152, 595, 4, 25, GOLD)
+        game.text(172, 608, '작업대', 30)
         self.button(CLOSE_BUTTON, '닫기')
 
-        game.text(194, 550, '제작 목록', 18, MUTED)
-        game.text(437, 550, '보유', 15, MUTED)
-        for index, item in enumerate(EQUIPMENT):
-            top = 527 - index * 52
-            selected = index == game.selected_entry
-            hovered = 192 <= game.mouse[0] <= 524 and top - 46 <= game.mouse[1] <= top
-            fill_rect(192, top - 46, 332, 46, (33, 64, 74) if selected else SURFACE)
-            if selected or hovered:
-                fill_rect(192, top - 46, 3, 46, CYAN if selected else BORDER)
-            game.icons[item.image].draw(220, top - 23, 40, 40)
-            game.text(249, top - 23, item.name, 18, CYAN if selected else CREAM)
-            fill_rect(438, top - 36, 72, 27, INK)
-            game.text(450, top - 23, str(state.equipment[item.image]), 18, GOLD)
-        fill_rect(544, 209, 1, 347, BORDER)
-
-        # Large preview and concise item metadata.
-        fill_rect(570, 411, 118, 136, SURFACE)
-        game.icons[entry.image].draw(629, 481, 108, 108)
-        tier = '초급 장비' if entry.image.endswith('_01') else '중급 장비'
-        game.text(710, 533, tier, 15, CYAN)
-        game.text(710, 496, entry.name, 26)
-        game.text(710, 458, f'제작 시간  {recipe.seconds}초', 18, MUTED)
-        game.text(710, 425, f'완성 수량  1개    ·    보유  {state.equipment[entry.image]}개', 18, GOLD)
-        fill_rect(570, 391, 518, 1, BORDER)
-        game.text(574, 370, '필요 재료', 18)
-        game.text(882, 370, '보유 / 필요', 15, MUTED)
-        names = {material.image: material.name for material in MATERIALS}
+        # Output sits above the ingredient slots, with the recipe browser on its right.
+        fill_rect(386, 459, 136, 106, BORDER)
+        fill_rect(387, 460, 134, 104, SURFACE)
+        game.icons[entry.image].draw(454, 512, 96, 96)
+        game.text(327, 437, entry.name, 26)
+        count = len(self.ingredients()) if current_job else len(self.loaded_materials)
+        game.text(279, 415, f'조합 재료  {count} / {len(recipe.ingredients)}', 18, MUTED)
         for index, (material, required) in enumerate(recipe.ingredients.items()):
-            y = 315 - index * 64
+            left, bottom, right, top = slot_bounds(index)
+            loaded = current_job or material in self.loaded_materials
+            fill_rect(left, bottom, right - left, top - bottom, CYAN if loaded else BORDER)
+            fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
+            if loaded:
+                game.icons[material].draw((left + right) / 2, 365, 48, 48)
+                game.text(left + 13, 327, f'{MATERIAL_NAMES[material]}  ×{required}', 15, CYAN)
+            else:
+                game.text(left + 65, 366, '+', 26, BORDER)
+                game.text(left + 65, 334, f'재료 {index + 1}', 15, MUTED)
+        if state.job is None:
+            game.text(369, 287, f'제작 시간  {recipe.seconds}초', 18, GOLD)
+        else:
+            job = next(item for item in EQUIPMENT if item.image == state.job.equipment)
+            game.text(260, 287, f'{job.name} 제작 중 · {state.remaining:.1f}초', 18, GOLD)
+            progress = 1 - state.remaining / RECIPES[state.job.equipment].seconds
+            fill_rect(260, 276, 384, 3, SURFACE)
+            fill_rect(260, 276, 384 * max(0, min(1, progress)), 3, GOLD)
+        label, available, reason = self.action_status()
+        self.button(ACTION_BUTTON, label, available, primary=True)
+        message = game.feedback if state.job is None and game.feedback else reason
+        if state.job is not None:
+            message = '완성품은 자동으로 회수됩니다.'
+        color = MUTED
+        if game.feedback:
+            color = CYAN if game.feedback_success else RED
+        game.text(168, 211, message, 15, color)
+
+        fill_rect(764, 224, 1, 334, BORDER)
+        game.text(790, 551, '제작 목록', 18)
+        game.text(1059, 551, '보유', 15, GOLD)
+        for index, item in enumerate(EQUIPMENT):
+            left, bottom, right, top = recipe_bounds(index)
+            selected = index == game.selected_entry
+            hovered = contains(recipe_bounds(index), *game.mouse)
+            fill_rect(left, bottom, right - left, top - bottom,
+                      (36, 61, 70) if selected else SURFACE)
+            if selected or hovered:
+                fill_rect(left, bottom, 3, top - bottom, GOLD if selected else BORDER)
+            game.icons[item.image].draw(left + 28, bottom + 23, 40, 40)
+            game.text(left + 59, bottom + 23, item.name, 18, GOLD if selected else CREAM)
+            fill_rect(1052, bottom + 8, 64, 30, INK)
+            game.text(1061, bottom + 23, str(state.equipment[item.image]), 18, GOLD)
+
+        # Only the selected recipe's materials are offered in the bottom strip.
+        fill_rect(152, 195, 976, 1, BORDER)
+        game.text(168, 184, '필요 재료', 18)
+        game.text(317, 184, '클릭해 투입 · 슬롯을 클릭하면 해제', 15, MUTED)
+        for index, (material, required) in enumerate(recipe.ingredients.items()):
+            left, bottom, right, top = material_bounds(index)
             owned = state.materials[material]
+            loaded = current_job or material in self.loaded_materials
             enough = owned >= required
             color = CYAN if enough else RED
-            fill_rect(570, y - 23, 518, 54, SURFACE)
-            game.icons[material].draw(599, y + 4, 42, 42)
-            game.text(634, y + 4, names[material], 18)
-            game.text(887, y + 4, str(owned), 22, color)
-            game.text(957, y + 4, '/', 18, MUTED)
-            game.text(987, y + 4, str(required), 22, GOLD)
-            fill_rect(1085, y - 23, 3, 54, color)
-
-        # Current job always shows its own item, even while browsing other recipes.
-        fill_rect(192, 174, 896, 1, BORDER)
-        if state.job is not None:
-            job_entry = next(item for item in EQUIPMENT if item.image == state.job.equipment)
-            ready = state.ready_to_collect
-            color = CYAN if ready else GOLD
-            game.icons[job_entry.image].draw(218, 133, 46, 46)
-            game.text(254, 147, job_entry.name, 18)
-            status = '제작 완료 · 완성품을 회수하세요' if ready else f'제작 중 · 남은 시간 {state.remaining:.1f}초'
-            game.text(445, 147, status, 15, color)
-            progress = 1 - state.remaining / RECIPES[state.job.equipment].seconds
-            fill_rect(254, 118, 520, 7, SURFACE)
-            fill_rect(254, 118, 520 * max(0, min(1, progress)), 7, color)
-        else:
-            available, reason = state.craft_status(entry.image)
-            message = '재료가 준비되었습니다' if available else reason
-            game.text(194, 145, message, 18, CYAN if available else RED)
-            game.text(194, 117, '완성된 장비는 작업대에서 직접 회수합니다.', 15, MUTED)
-        label, enabled, _ = game.panel_action()
-        self.button(ACTION_BUTTON, label, enabled, primary=True)
-        if game.feedback and state.job is None:
-            fill_rect(192, 187, 896, 29, SURFACE)
-            game.text(204, 202, game.feedback, 15, CYAN if game.feedback_success else RED)
+            hovered = contains(material_bounds(index), *game.mouse)
+            fill_rect(left, bottom, right - left, top - bottom, BORDER if loaded or hovered else SURFACE)
+            fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
+            game.icons[material].draw(left + 33, bottom + 34, 48, 48)
+            game.text(left + 68, bottom + 46, f'{index + 1}  {MATERIAL_NAMES[material]}', 18)
+            game.text(left + 68, bottom + 19, f'보유 {owned}', 18, color)
+            game.text(left + 190, bottom + 19, f'/ 필요 {required}', 18, GOLD)
+        game.text(831, 143, '제작 완료 시 자동 회수', 18, CYAN)
+        game.text(831, 116, '재료는 제작 시작 시 사용', 15, MUTED)

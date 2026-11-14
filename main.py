@@ -16,7 +16,7 @@ from session_results import SessionResults
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
 from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
-from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
+from workshop import EQUIPMENT, HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
@@ -86,16 +86,21 @@ class Game:
         self.feedback = ""
         self.feedback_success = True
         self.mouse = (0, 0)
+        self.workbench_panel.reset()
         self.customer_board.reset()
         self.enhancement_panel.reset()
         self.running = True
 
     def close_panel(self):
+        self.workbench_panel.reset()
         self.active_station = None
         self.feedback = ""
 
     def select_entry(self, index):
-        self.selected_entry = index % len(self.active_station.entries)
+        selected = index % len(self.active_station.entries)
+        if selected != self.selected_entry and self.active_station.name == "작업대":
+            self.workbench_panel.reset()
+        self.selected_entry = selected
         self.purchase_quantity = 1
         self.feedback = ""
 
@@ -110,7 +115,9 @@ class Game:
         if self.active_station:
             self.player.moving = False
             self.player.walk_time = 0.0
-            if self.active_station.name == "주문 게시판":
+            if self.active_station.name == "작업대":
+                self.workbench_panel.reset()
+            elif self.active_station.name == "주문 게시판":
                 self.customer_board.reset()
             elif self.active_station.name == "강화 장치":
                 self.enhancement_panel.reset()
@@ -142,6 +149,8 @@ class Game:
                     self.customer_board.handle_key(event.key)
                 elif self.active_station and self.active_station.name == "강화 장치":
                     self.enhancement_panel.handle_key(event.key)
+                elif self.active_station and self.active_station.name == "작업대":
+                    self.workbench_panel.handle_key(event.key)
                 elif self.active_station:
                     if event.key in (sdl2.SDLK_UP, sdl2.SDLK_w):
                         self.select_entry(self.selected_entry - 1)
@@ -202,13 +211,7 @@ class Game:
             cost = MATERIAL_PRICES[entry.image] * self.purchase_quantity
             return f"{cost} 코인 구매", available, reason
         if self.active_station.name == "작업대":
-            if self.state.job is not None:
-                if self.state.ready_to_collect:
-                    return "완성품 회수", True, ""
-                return "제작 중", False, ""
-            entry = self.active_station.entries[self.selected_entry]
-            available, reason = self.state.craft_status(entry.image)
-            return "제작 시작", available, reason
+            return self.workbench_panel.action_status()
         return None
 
     def perform_action(self):
@@ -218,11 +221,7 @@ class Game:
             if self.feedback_success:
                 self.purchase_quantity = 1
         elif self.active_station.name == "작업대":
-            if self.state.job is not None:
-                self.feedback_success, self.feedback = self.state.collect()
-            else:
-                entry = self.active_station.entries[self.selected_entry]
-                self.feedback_success, self.feedback = self.state.start_craft(entry.image)
+            self.workbench_panel.start_craft()
 
     def draw_button(self, bounds, label, enabled=True, selected=False):
         left, bottom, right, top = bounds
@@ -236,6 +235,13 @@ class Game:
         self.text((left + right - text_width.value) / 2, (bottom + top) / 2 + 1, label, 18, INK)
 
     def update(self, dt):
+        completed = self.state.update_crafting()
+        if completed is not None:
+            self.workbench_panel.reset()
+            if self.active_station and self.active_station.name == "작업대":
+                name = next(entry.name for entry in EQUIPMENT if entry.image == completed)
+                self.feedback = f"{name} 1개 제작 완료 · 자동 회수되었습니다."
+                self.feedback_success = True
         if self.state.finish_session() is not None:
             return
         self.state.update_rentals()
@@ -341,12 +347,8 @@ class Game:
             return
         name = next(entry.name for entry in EQUIPMENT if entry.image == self.state.job.equipment)
         fill_rect(366, 665, 600, 39, INK, 240)
-        if self.state.ready_to_collect:
-            self.text(382, 687, f"{name} 완성 · 작업대에서 회수", 18, CYAN)
-            progress = 1.0
-        else:
-            self.text(382, 687, f"{name} 제작 중 · {self.state.remaining:.1f}초", 18, GOLD)
-            progress = 1 - self.state.remaining / RECIPES[self.state.job.equipment].seconds
+        self.text(382, 687, f"{name} 제작 중 · {self.state.remaining:.1f}초", 18, GOLD)
+        progress = 1 - self.state.remaining / RECIPES[self.state.job.equipment].seconds
         fill_rect(382, 669, 568, 3, (40, 68, 83))
         fill_rect(382, 669, 568 * progress, 3, CYAN)
 
@@ -402,7 +404,7 @@ class Game:
             if self.active_station.name == "재료 보관대":
                 controls = "↑ ↓ 선택   ← → 수량   SPACE 구매   E / ESC 닫기"
             elif self.active_station.name == "작업대":
-                controls = "↑ ↓ 선택   SPACE 제작 / 회수   E / ESC 닫기"
+                controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2 투입   SPACE 제작   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
                 controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
                 if self.customer_board.unit_action:
