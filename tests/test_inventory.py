@@ -171,6 +171,32 @@ class InventoryTests(unittest.TestCase):
         self.assertTrue(all(count == 999 for count in self.state.materials.values()))
         self.assertEqual(self.state.inventory_used, 9)
 
+    def test_starter_equipment_is_available_once_without_counting_as_crafted(self):
+        state = GameState(starter_equipment=True)
+        self.assertEqual(state.inventory_used, 3)
+        self.assertEqual([item.image for item in state.inventory_items()],
+                         ["eq_drill_01", "eq_suit_01", "eq_oxygen_01"])
+        self.assertEqual(len({item.unit_id for item in state.inventory_items()}), 3)
+        self.assertEqual(state.collected_equipment_count, 0)
+        self.assertEqual(state.coins, 100)
+
+    def test_bulk_equipment_moves_clicked_unit_first_and_respects_capacity(self):
+        self.state.add_equipment("eq_drill_01", 9)
+        units = self.state.available_units("eq_drill_01")
+        units[-1].level = 8
+        self.assertTrue(self.state.store_equipment("eq_drill_01", units[-1].identifier, 10)[0])
+        self.assertEqual(len(self.state.storage_units["eq_drill_01"]), 9)
+        self.assertIs(self.state.storage_units["eq_drill_01"][0], units[-1])
+        self.state.materials["mat_01"] = 1
+        self.assertTrue(self.state.withdraw_equipment("eq_drill_01", units[-1].identifier, None)[0])
+        self.assertEqual(self.state.equipment["eq_drill_01"], 8)
+        self.assertEqual(len(self.state.storage_units["eq_drill_01"]), 1)
+        self.assertIs(self.state.available_units("eq_drill_01")[0], units[-1])
+        self.assertEqual(units[-1].level, 8)
+        self.assertEqual(self.state.inventory_used, 9)
+        self.assertTrue(self.state.store_equipment("eq_drill_01", units[-1].identifier, 1)[0])
+        self.assertEqual(self.state.equipment["eq_drill_01"], 7)
+
     def test_session_result_includes_pending_returns_and_freezes_delivery(self):
         self.state.add_equipment("eq_drill_01", 1)
         self.state.current_order = Order(52, "npc_novice", (("eq_drill_01", 1),))

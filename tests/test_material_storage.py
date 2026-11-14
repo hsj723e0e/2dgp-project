@@ -60,6 +60,31 @@ class MaterialStorageTests(unittest.TestCase):
         self.state.withdraw_resource("mat_01")
         self.assertEqual(self.state.materials["mat_01"], 5)
 
+    def test_single_ten_and_all_transfer_counts_are_clamped_to_available_amount(self):
+        self.state.materials["mat_01"] = 25
+        self.state.store_resource("mat_01", 1)
+        self.assertEqual(self.state.materials["mat_01"], 24)
+        self.state.store_resource("mat_01", 10)
+        self.assertEqual(self.state.resource_storage["mat_01"], 11)
+        self.state.withdraw_resource("mat_01", 10)
+        self.assertEqual(self.state.resource_storage["mat_01"], 1)
+        self.state.withdraw_resource("mat_01", 10)
+        self.assertEqual(self.state.materials["mat_01"], 25)
+        self.state.store_resource("mat_01", None)
+        self.assertEqual(self.state.materials["mat_01"], 0)
+        self.state.withdraw_resource("mat_01", None)
+        self.assertEqual(self.state.materials["mat_01"], 25)
+        self.assertEqual(self.state.resource_storage["mat_01"], 0)
+
+    def test_invalid_transfer_quantities_cannot_reverse_or_duplicate_items(self):
+        self.state.rewards["item_core"] = 12
+        self.state.store_resource("item_core", 1)
+        before = (self.state.rewards.copy(), self.state.resource_storage.copy())
+        for quantity in (0, -1, True, 1.5):
+            self.assertFalse(self.state.store_resource("item_core", quantity)[0])
+            self.assertFalse(self.state.withdraw_resource("item_core", quantity)[0])
+            self.assertEqual((self.state.rewards, self.state.resource_storage), before)
+
     def test_transfers_stop_at_session_end_and_cheat_keeps_stored_counts(self):
         self.state.materials["mat_01"] = 17
         self.state.store_resource("mat_01")

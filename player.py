@@ -21,7 +21,7 @@ class Rect:
 
 
 class Player:
-    SPEED = 190.0
+    SPEED = 570.0
     FOOT_HALF_WIDTH = 13
     FOOT_HEIGHT = 12
     FRAME_WIDTH = 64

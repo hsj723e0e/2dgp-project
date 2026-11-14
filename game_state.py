@@ -72,6 +72,14 @@ class SessionResult:
     collected_equipment: int
 
 
+def transfer_quantity(available, requested):
+    if requested is None:
+        return available
+    if type(requested) is not int or requested < 1:
+        return 0
+    return min(available, requested)
+
+
 def basic_upgrade_cost(unit):
     base_cost = 8 if unit.equipment.endswith("_01") else 12
     return base_cost * (unit.level + 1)
@@ -83,7 +91,7 @@ def rental_success_probability(units):
 
 
 class GameState:
-    def __init__(self, clock=monotonic, rng=None, session_duration=SESSION_DURATION):
+    def __init__(self, clock=monotonic, rng=None, session_duration=SESSION_DURATION, starter_equipment=False):
         if not isfinite(session_duration) or session_duration <= 0:
             raise ValueError("Session duration must be a positive finite number")
         self.coins = 100
@@ -111,6 +119,9 @@ class GameState:
         self.result = None
         self.sold_order_count = 0
         self.collected_equipment_count = 0
+        if starter_equipment:
+            for entry in EQUIPMENT[:3]:
+                self.add_equipment(entry.image, 1)
 
     @property
     def session_remaining(self):
@@ -199,7 +210,7 @@ class GameState:
         return tuple(InventoryItem(unit.equipment, level=unit.level, unit_id=unit.identifier)
                      for unit in self.storage_units[equipment])
 
-    def store_equipment(self, equipment, unit_id):
+    def store_equipment(self, equipment, unit_id, quantity=1):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
         if equipment not in self.storage_units:
@@ -210,11 +221,16 @@ class GameState:
             return False, "선택한 종류의 장비만 보관할 수 있습니다."
         if len(self.storage_units[equipment]) >= CHEST_CAPACITY:
             return False, "보관함 28칸이 가득 찼습니다."
-        self.take_units((unit,))
-        self.storage_units[equipment].append(unit)
-        return True, "장비를 보관했습니다."
+        units = [unit] + [other for other in self.available_units(equipment) if other.identifier != unit_id]
+        count = min(transfer_quantity(len(units), quantity), CHEST_CAPACITY - len(self.storage_units[equipment]))
+        if count < 1:
+            return False, "이동할 장비 수량이 없습니다."
+        moved = units[:count]
+        self.take_units(moved)
+        self.storage_units[equipment].extend(moved)
+        return True, f"장비 {count}개를 보관했습니다."
 
-    def withdraw_equipment(self, equipment, unit_id):
+    def withdraw_equipment(self, equipment, unit_id, quantity=1):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
         if equipment not in self.storage_units:
@@ -223,37 +239,44 @@ class GameState:
                      if unit.identifier == unit_id), None)
         if unit is None:
             return False, "꺼낼 장비가 없습니다."
-        if not self.return_units((unit,)):
+        if self.inventory_free == 0:
             return False, "가방 9칸이 가득 찼습니다."
-        self.storage_units[equipment].remove(unit)
-        return True, "장비를 가방으로 옮겼습니다."
+        units = [unit] + [other for other in self.storage_units[equipment] if other.identifier != unit_id]
+        count = min(transfer_quantity(len(units), quantity), self.inventory_free)
+        if count < 1:
+            return False, "이동할 장비 수량이 없습니다."
+        moved = units[:count]
+        self.return_units(moved)
+        for other in moved:
+            self.storage_units[equipment].remove(other)
+        return True, f"장비 {count}개를 가방으로 옮겼습니다."
 
-    def store_resource(self, image):
+    def store_resource(self, image, quantity=None):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
         if image not in self.resource_storage:
             return False, "재료와 보상 아이템만 보관할 수 있습니다."
         inventory = self.materials if image in self.materials else self.rewards
-        quantity = inventory[image]
+        quantity = transfer_quantity(inventory[image], quantity)
         if quantity == 0:
             return False, "보관할 아이템이 없습니다."
         self.resource_storage[image] += quantity
-        inventory[image] = 0
+        inventory[image] -= quantity
         return True, f"{quantity}개를 보관했습니다."
 
-    def withdraw_resource(self, image):
+    def withdraw_resource(self, image, quantity=None):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
         if image not in self.resource_storage:
             return False, "재료와 보상 아이템만 꺼낼 수 있습니다."
-        quantity = self.resource_storage[image]
+        quantity = transfer_quantity(self.resource_storage[image], quantity)
         if quantity == 0:
             return False, "꺼낼 아이템이 없습니다."
         inventory = self.materials if image in self.materials else self.rewards
         if inventory[image] == 0 and image not in self.staged_materials and self.inventory_free == 0:
             return False, "가방 9칸이 가득 찼습니다."
         inventory[image] += quantity
-        self.resource_storage[image] = 0
+        self.resource_storage[image] -= quantity
         return True, f"{quantity}개를 가방으로 옮겼습니다."
 
     def new_equipment_unit(self, equipment):

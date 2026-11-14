@@ -60,7 +60,7 @@ class Game:
         self.icons = {name: p2.load_image(str(ASSETS / f"{name}.png")) for name in image_names}
         self.fonts = load_fonts()
         self.player = Player()
-        self.state = GameState()
+        self.state = GameState(starter_equipment=True)
         self.running = True
         self.active_station = None
         self.inventory_open = False
@@ -80,7 +80,7 @@ class Game:
         self.fonts[size].draw(x, y, text, color)
 
     def reset_session(self):
-        self.state = GameState()
+        self.state = GameState(starter_equipment=True)
         self.player = Player()
         self.active_station = None
         self.inventory_open = False
@@ -160,18 +160,30 @@ class Game:
                     self.workbench_panel.handle_key(event.key)
             elif event.type == sdl2.SDL_MOUSEMOTION:
                 self.mouse = (event.x, HEIGHT - event.y)
-            elif event.type == sdl2.SDL_MOUSEBUTTONDOWN and event.button == sdl2.SDL_BUTTON_LEFT:
+            elif event.type == sdl2.SDL_MOUSEBUTTONDOWN and event.button in (sdl2.SDL_BUTTON_LEFT, sdl2.SDL_BUTTON_RIGHT):
                 self.mouse = (event.x, HEIGHT - event.y)
-                self.handle_click(*self.mouse)
+                shift = bool(sdl2.SDL_GetModState() & sdl2.KMOD_SHIFT)
+                self.handle_click(*self.mouse, button=event.button, shift=shift)
 
-    def handle_click(self, x, y):
+    def handle_click(self, x, y, button=sdl2.SDL_BUTTON_LEFT, shift=False):
         if self.inventory_open:
-            self.inventory_panel.handle_click(x, y)
+            if button == sdl2.SDL_BUTTON_LEFT:
+                self.inventory_panel.handle_click(x, y)
             return
         if not self.active_station:
             return
+        quantity = 1
+        if button == sdl2.SDL_BUTTON_RIGHT:
+            quantity = 10
+        if shift:
+            quantity = None
         if self.active_station.name == "장비 진열대":
-            self.storage_panel.handle_click(x, y)
+            self.storage_panel.handle_click(x, y, quantity, button)
+            return
+        if self.active_station.name == "재료 보관대":
+            self.material_storage_panel.handle_click(x, y, quantity, button)
+            return
+        if button != sdl2.SDL_BUTTON_LEFT:
             return
         if self.active_station.name == "작업대":
             self.workbench_panel.handle_click(x, y)
@@ -182,8 +194,6 @@ class Game:
         if self.active_station.name == "강화 장치":
             self.enhancement_panel.handle_click(x, y)
             return
-        if self.active_station.name == "재료 보관대":
-            self.material_storage_panel.handle_click(x, y)
 
     def panel_action(self):
         if self.active_station.name == "작업대":
@@ -330,9 +340,9 @@ class Game:
         elif self.active_station:
             controls = "↑ ↓ / W S 선택   E / ESC 닫기"
             if self.active_station.name == "장비 진열대":
-                controls = "↑ ↓ 보관함 선택   장비 클릭 보관 / 꺼내기   E / ESC 닫기"
+                controls = "↑ ↓ 종류   좌클릭 1개 / 우클릭 10개 / SHIFT+클릭 전체   E / ESC 닫기"
             elif self.active_station.name == "재료 보관대":
-                controls = "가방 재료 클릭 보관   보관 칸 클릭 꺼내기   E / ESC 닫기"
+                controls = "좌클릭 1개 / 우클릭 10개 / SHIFT+클릭 전체   E / ESC 닫기"
             elif self.active_station.name == "작업대":
                 controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2 투입   SPACE 제작   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":

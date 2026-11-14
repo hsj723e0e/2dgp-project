@@ -110,23 +110,23 @@ class StoragePanel:
         elif key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
             self.game.select_entry(self.game.selected_entry + 1)
 
-    def handle_click(self, x, y):
+    def handle_click(self, x, y, quantity=1, button=sdl2.SDL_BUTTON_LEFT):
         game = self.game
-        if contains(CLOSE_STORAGE, x, y):
+        if button == sdl2.SDL_BUTTON_LEFT and contains(CLOSE_STORAGE, x, y):
             game.close_panel()
             return
         for index in range(len(EQUIPMENT)):
-            if contains(storage_recipe_bounds(index), x, y):
+            if button == sdl2.SDL_BUTTON_LEFT and contains(storage_recipe_bounds(index), x, y):
                 game.select_entry(index)
                 return
         equipment = EQUIPMENT[game.selected_entry].image
         for index, item in enumerate(game.state.inventory_items()):
             if contains(slot_bounds(STORAGE_BAG_ORIGIN, index, 3), x, y):
-                game.feedback_success, game.feedback = game.state.store_equipment(equipment, item.unit_id)
+                game.feedback_success, game.feedback = game.state.store_equipment(equipment, item.unit_id, quantity)
                 return
         for index, item in enumerate(game.state.chest_items(equipment)):
             if contains(slot_bounds(CHEST_ORIGIN, index, 7), x, y):
-                game.feedback_success, game.feedback = game.state.withdraw_equipment(equipment, item.unit_id)
+                game.feedback_success, game.feedback = game.state.withdraw_equipment(equipment, item.unit_id, quantity)
                 return
 
     def draw(self):
@@ -159,7 +159,7 @@ class StoragePanel:
         bag_hovered = draw_grid(game, STORAGE_BAG_ORIGIN, bag, 3, 3)
         if bag_hovered is not None:
             hovered = bag_hovered
-        game.text(394, 224, '장비 클릭 · 보관함 ↔ 가방 이동', 18, MUTED)
+        game.text(394, 224, '좌클릭 1개 · 우클릭 10개 · Shift+클릭 전체', 18, MUTED)
         game.text(878, 278, '가방 장비만 판매·대여', 15, MUTED)
         if hovered is not None:
             game.text(394, 185, ITEM_NAMES[hovered.image], 18)
@@ -179,18 +179,18 @@ class MaterialStoragePanel:
     def __init__(self, game):
         self.game = game
 
-    def handle_click(self, x, y):
+    def handle_click(self, x, y, quantity=1, button=sdl2.SDL_BUTTON_LEFT):
         game = self.game
-        if contains(CLOSE_STORAGE, x, y):
+        if button == sdl2.SDL_BUTTON_LEFT and contains(CLOSE_STORAGE, x, y):
             game.close_panel()
             return
         for index, entry in enumerate(RESOURCE_ITEMS):
             if contains(resource_slot_bounds(index), x, y):
-                game.feedback_success, game.feedback = game.state.withdraw_resource(entry.image)
+                game.feedback_success, game.feedback = game.state.withdraw_resource(entry.image, quantity)
                 return
         for index, item in enumerate(game.state.inventory_items()):
             if contains(slot_bounds(STORAGE_BAG_ORIGIN, index, 3), x, y):
-                game.feedback_success, game.feedback = game.state.store_resource(item.image)
+                game.feedback_success, game.feedback = game.state.store_resource(item.image, quantity)
                 return
 
     def draw(self):
@@ -221,6 +221,6 @@ class MaterialStoragePanel:
         hovered = draw_grid(game, STORAGE_BAG_ORIGIN, bag, 3, 3)
         if hovered:
             game.text(878, 280, ITEM_NAMES[hovered.image], 18)
-        game.text(158, 195, '아이템 클릭 · 보관함 ↔ 가방 묶음 이동', 18, MUTED)
+        game.text(158, 195, '좌클릭 1개 · 우클릭 10개 · Shift+클릭 전체', 18, MUTED)
         if game.feedback:
             game.text(158, 143, game.feedback, 18, CYAN if game.feedback_success else RED)
