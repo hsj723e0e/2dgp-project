@@ -48,11 +48,10 @@ def draw_item_icon(game, image, x, y, width, height, framed=True):
     game.icons[image].draw(x, y, width - padding, height - padding)
     category = ITEM_CATEGORIES.get(image)
     if category is not None:
-        size = max(12, min(28, round(min(width, height) * 0.3)))
+        size = max(18, min(48, round(min(width, height) * 0.4)))
         badge_x = left + width - size / 2 - 2
         badge_y = bottom + height - size / 2 - 2
-        fill_rect(badge_x - size / 2, badge_y - size / 2, size, size, INK)
-        game.category_icons[category].draw(badge_x, badge_y, size - 2, size - 2)
+        game.category_icons[category].draw(badge_x, badge_y, size, size)
 
 
 def quantity_badge(game, x, y, value, label="", color=GOLD, width=100):

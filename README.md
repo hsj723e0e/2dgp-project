@@ -201,7 +201,8 @@ Space 또는 선택 확정 버튼으로 판매합니다. `2` 대여를 선택하
 | 3 | 합금 드릴·강화 우주복·순환형 산소통 | 파란색 |
 | 4 | 플라스마 드릴·첨단 탐사복·자급형 생명유지장치 | 노란색 |
 
-장비 아이콘 우측 상단의 작은 표시로 드릴·우주복·산소 공급장치를 구분합니다.
+장비 아이콘 우측 상단의 배지로 드릴·우주복·산소 공급장치를 구분합니다.
+주황색 드릴 날·하늘색 헬멧·청록색 O₂ 기호를 남색 바탕과 밝은 테두리에 표시합니다.
 가방과 보관함의 선택 표시는 단계 테두리 바깥에 별도 테두리로 표시합니다.
 인벤토리·보관함·제작·강화·주문·결과 화면에서 같은 표시를 사용합니다.
 
@@ -210,9 +211,9 @@ Space 또는 선택 확정 버튼으로 판매합니다. `2` 대여를 선택하
 생성에 사용한 공통 프롬프트와 종류별 subject는 다음과 같습니다.
 
 ```text
-Use case: stylized-concept. Asset type: a tiny pixel-art item-category UI badge for a space workshop game. Create {subject}. One symbol centred on a square transparent canvas. Strong simple ivory-white silhouette with a dark navy pixel outline and minimal pale cyan shading, readable at 16 by 16 pixels. Crisp chunky pixel-art edges and only a few large shapes. The symbol occupies roughly 80 percent of the square. No text, no numbers, no letters, no frame, no disc, no scenery, no shadow outside the symbol. Deliver a PNG with genuine transparent background. Keep the visual design appropriate for a small top-right overlay on an existing equipment icon.
+Create one production-ready square category badge asset matching the bottom row of the supplied approved game UI mockup. The supplied image is a visual reference. ONLY draw the badge, with no inventory tile, item sprite, text captions, or scenery. Dark navy filled square with subtly clipped pixel corners, a clean bright pale outline, and one large flat bold glyph filling most of the interior. Crisp low-detail pixel-art edges, designed to stay readable at 24x24 pixels. Transparent outside the badge silhouette. Keep the three category badges visually consistent. {subject}
 
-drill subject = a single diagonally oriented spiral drill bit, recognizable corkscrew tip, compact silhouette
-suit subject = a single front-facing spacesuit torso with broad shoulders and a rounded helmet, clear compact astronaut suit silhouette
-oxygen subject = a single upright oxygen cylinder with a small valve and one short curved hose, clear compact life-support cylinder silhouette
+drill subject = An orange spiral drill bit pointing diagonally upward-right, matching the bottom-left badge in the reference. Use orange #FFA600. No text.
+suit subject = A sky-blue astronaut helmet outline with a bold visor and short flat collar, matching the bottom-middle badge in the reference. Use sky blue #77DAFF. No text.
+oxygen subject = A turquoise oxygen-cylinder silhouette with a thick top valve. Bold dark navy O₂ printed clearly on the cylinder body, matching the bottom-right badge in the reference. Use turquoise #24E4D2. The only text is O₂.
 ```
