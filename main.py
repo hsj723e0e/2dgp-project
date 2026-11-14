@@ -428,7 +428,9 @@ class Game:
                 if self.customer_board.unit_action:
                     controls = "↑ ↓ 요청 선택   ← → 장비 선택   SPACE 확정   ESC 취소"
             elif self.active_station.name == "강화 장치":
-                controls = "TAB 분류 전환   ↑ ↓ 종류   ← → 보유 장비   SPACE 강화   E / ESC 닫기"
+                controls = "TAB 분류 전환   ↑ ↓ 종류   SPACE 제작 / 강화   E / ESC 닫기"
+                if self.enhancement_panel.mode == "basic":
+                    controls = "TAB 분류 전환   가방 장비 클릭 선택   SPACE 강화   E / ESC 닫기"
             self.text(28, 23, controls, 15, MUTED)
             self.text(1002, 23, "ESC  시설 닫기", 15, MUTED)
         else:

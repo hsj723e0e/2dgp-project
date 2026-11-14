@@ -35,14 +35,22 @@ def storage_recipe_bounds(index):
     return (116, top - 46, 366, top)
 
 
-def draw_grid(game, origin, items, columns, rows):
+def draw_grid(game, origin, items, columns, rows, selected_unit_id=None):
     hovered = None
     for index in range(columns * rows):
         bounds = slot_bounds(origin, index, columns)
         left, bottom, right, top = bounds
         active = contains(bounds, *game.mouse)
-        fill_rect(left, bottom, SLOT_SIZE, SLOT_SIZE, CYAN if active else BORDER)
-        fill_rect(left + 1, bottom + 1, SLOT_SIZE - 2, SLOT_SIZE - 2, SURFACE)
+        selected = (selected_unit_id is not None and index < len(items)
+                    and items[index].unit_id == selected_unit_id)
+        color = CYAN if active else BORDER
+        border_width = 1
+        if selected:
+            color = GOLD
+            border_width = 3
+        fill_rect(left, bottom, SLOT_SIZE, SLOT_SIZE, color)
+        fill_rect(left + border_width, bottom + border_width,
+                  SLOT_SIZE - border_width * 2, SLOT_SIZE - border_width * 2, SURFACE)
         if index >= len(items):
             continue
         item = items[index]

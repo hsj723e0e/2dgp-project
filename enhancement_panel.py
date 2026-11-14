@@ -3,7 +3,8 @@
 import sdl2
 
 from customer_board import contains
-from game_state import MAX_ENHANCEMENT, PERSONAL_CHIP_COST, PERSONAL_CORE_COST, basic_upgrade_cost, rental_success_probability
+from game_state import MAX_ENHANCEMENT, PERSONAL_CHIP_COST, PERSONAL_CORE_COST, basic_upgrade_cost
+from inventory_panel import draw_grid, slot_bounds
 from ui import CYAN, GOLD, INK, MUTED, fill_rect, quantity_badge, quantity_pair
 from workshop import EQUIPMENT, PERSONAL_EQUIPMENT, WIDTH, HEIGHT
 
@@ -12,8 +13,7 @@ MODES = ("basic", "personal", "materials")
 TABS = ((275, 520, 503, 554), (526, 520, 754, 554), (777, 520, 1005, 554))
 CLOSE = (280, 116, 520, 180)
 ACTION = (708, 116, 948, 180)
-PREVIOUS_UNIT = (708, 185, 780, 217)
-NEXT_UNIT = (900, 185, 972, 217)
+BASIC_INVENTORY_ORIGIN = (308, 472)
 
 
 class EnhancementPanel:
@@ -24,7 +24,7 @@ class EnhancementPanel:
     def reset(self):
         self.mode = "basic"
         self.selected_entry = 0
-        self.unit_index = 0
+        self.selected_unit_id = None
 
     @property
     def entries(self):
@@ -40,30 +40,30 @@ class EnhancementPanel:
 
     @property
     def selected_unit(self):
-        units = self.game.state.available_units(self.entry.image)
-        return units[self.unit_index % len(units)] if units else None
+        for equipment in EQUIPMENT:
+            for unit in self.game.state.available_units(equipment.image):
+                if unit.identifier == self.selected_unit_id:
+                    return unit
+        return None
 
     def select_mode(self, mode):
         self.mode = mode
-        self.selected_entry = self.unit_index = 0
+        self.selected_entry = 0
+        self.selected_unit_id = None
         self.game.feedback = ""
 
     def select_entry(self, index):
         self.selected_entry = index % len(self.entries)
-        self.unit_index = 0
+        self.selected_unit_id = None
         self.game.feedback = ""
 
     def handle_key(self, key):
         if key == sdl2.SDLK_TAB:
             self.select_mode(MODES[(MODES.index(self.mode) + 1) % len(MODES)])
-        elif key in (sdl2.SDLK_UP, sdl2.SDLK_w):
+        elif self.mode != "basic" and key in (sdl2.SDLK_UP, sdl2.SDLK_w):
             self.select_entry(self.selected_entry - 1)
-        elif key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
+        elif self.mode != "basic" and key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
             self.select_entry(self.selected_entry + 1)
-        elif self.mode == "basic" and key == sdl2.SDLK_LEFT:
-            self.unit_index -= 1
-        elif self.mode == "basic" and key == sdl2.SDLK_RIGHT:
-            self.unit_index += 1
         elif key == sdl2.SDLK_SPACE:
             self.perform_action()
 
@@ -77,10 +77,13 @@ class EnhancementPanel:
                 if contains(bounds, x, y):
                     self.select_mode(mode)
                     return
-            if self.mode == "basic" and contains(PREVIOUS_UNIT, x, y):
-                self.unit_index -= 1
-            elif self.mode == "basic" and contains(NEXT_UNIT, x, y):
-                self.unit_index += 1
+            if self.mode == "basic":
+                for index, item in enumerate(self.game.state.inventory_items()):
+                    if contains(slot_bounds(BASIC_INVENTORY_ORIGIN, index, 3), x, y):
+                        if item.unit_id is not None:
+                            self.selected_unit_id = item.unit_id
+                            self.game.feedback = ""
+                        return
             elif 275 <= x <= 610:
                 for index in range(len(self.entries)):
                     row_y = 478 - index * 52
@@ -89,8 +92,10 @@ class EnhancementPanel:
                         break
 
     def perform_action(self):
-        if self.mode == "basic" and self.selected_unit:
-            self.game.feedback_success, self.game.feedback = self.game.state.enhance_basic(self.entry.image, self.selected_unit.identifier)
+        if self.mode == "basic":
+            unit = self.selected_unit
+            if unit is not None:
+                self.game.feedback_success, self.game.feedback = self.game.state.enhance_basic(unit.equipment, unit.identifier)
         elif self.mode == "personal":
             state = self.game.state
             action = state.craft_personal if state.personal_equipment[self.entry.image] is None else state.enhance_personal
@@ -102,25 +107,31 @@ class EnhancementPanel:
 
     def draw_basic(self):
         game, state = self.game, self.game.state
+        items = state.inventory_items()
+        game.text(278, 493, "캐릭터 인벤토리", 18, MUTED)
+        game.text(535, 493, f"{len(items)} / 9", 22, GOLD)
+        draw_grid(game, BASIC_INVENTORY_ORIGIN, items, 3, 3,
+                  selected_unit_id=self.selected_unit_id)
+        game.text(278, 255, "강화할 장비를 클릭하세요.", 18, MUTED)
         unit = self.selected_unit
         if unit is None:
-            game.text(654, 275, "보유 장비가 없습니다.", 22, GOLD)
-            game.draw_button(ACTION, "장비 강화", False)
+            game.text(654, 380, "가방에서 장비를 선택하세요.", 22, MUTED)
+            game.draw_button(ACTION, "코인으로 강화", False)
             return
+        entry = next(entry for entry in EQUIPMENT if entry.image == unit.equipment)
+        game.icons[unit.equipment].draw(816, 428, 144, 144)
+        game.text(654, 329, entry.name, 22)
         quantity_badge(game, 654, 279, f"+{unit.level}", "현재", CYAN, 144)
         maximum = unit.level == MAX_ENHANCEMENT
         quantity_badge(game, 850, 279, f"+{min(MAX_ENHANCEMENT, unit.level + 1)}", "최대" if maximum else "다음", GOLD, 144)
-        cost_label = "최대 강화 +13" if maximum else f"강화 비용 {basic_upgrade_cost(unit)} 코인"
-        game.text(654, 260, cost_label, 18, GOLD)
-        current = rental_success_probability((unit,))
-        following = min(.98, current + .01)
-        chance_label = f"대여 성공률 {current:.0%} (최대)" if maximum else f"대여 성공률 {current:.0%} → {following:.0%}"
-        game.text(654, 234, chance_label, 18, CYAN)
-        units = state.available_units(self.entry.image)
-        game.draw_button(PREVIOUS_UNIT, "←")
-        game.draw_button(NEXT_UNIT, "→")
-        game.text(791, 201, f"{self.unit_index % len(units) + 1}/{len(units)}", 18)
-        available, reason = state.basic_upgrade_status(self.entry.image, unit.identifier)
+        if maximum:
+            game.text(654, 237, "최대 강화 +13", 18, GOLD)
+        else:
+            game.text(654, 237, "강화 비용", 18, MUTED)
+            fill_rect(755, 218, 112, 36, (53, 45, 30))
+            game.text(769, 237, str(basic_upgrade_cost(unit)), 26, GOLD)
+            game.text(883, 237, "코인", 18, MUTED)
+        available, reason = state.basic_upgrade_status(unit.equipment, unit.identifier)
         game.draw_button(ACTION, "코인으로 강화", available)
         if reason and not game.feedback:
             self.draw_note(reason)
@@ -158,12 +169,18 @@ class EnhancementPanel:
 
     def draw(self):
         game, state = self.game, self.game.state
-        fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
+        fill_rect(0, 44, WIDTH, HEIGHT - 44, INK, 155)
         game.draw_panel_frame()
         game.text(278, 588, "강화 장치", 30)
         for mode, bounds, label in zip(MODES, TABS, ("기본 장비 강화", "개인 최상급 장비", "성장 재료")):
             game.draw_button(bounds, label, selected=mode == self.mode)
         fill_rect(275, 510, 730, 2, (61, 87, 103))
+        if self.mode == "basic":
+            self.draw_basic()
+            game.draw_button(CLOSE, "돌아가기")
+            if game.feedback:
+                self.draw_note(game.feedback, CYAN if game.feedback_success else GOLD)
+            return
         for index, entry in enumerate(self.entries):
             row_y = 478 - index * 52
             selected = index == self.selected_entry
@@ -172,9 +189,7 @@ class EnhancementPanel:
                 fill_rect(275, row_y - 24, 3, 48, CYAN)
             game.icons[entry.image].draw(306, row_y, 42, 42)
             game.text(339, row_y, entry.name, 18, CYAN if selected else MUTED)
-            if self.mode == "basic":
-                quantity_badge(game, 536, row_y - 16, state.equipment[entry.image], width=64)
-            elif self.mode == "materials":
+            if self.mode == "materials":
                 quantity_badge(game, 536, row_y - 16, state.rewards[entry.image], width=64)
             elif self.mode == "personal":
                 level = state.personal_equipment[entry.image]
@@ -184,9 +199,7 @@ class EnhancementPanel:
                     quantity_badge(game, 536, row_y - 16, f"+{level}", color=CYAN, width=64)
         game.icons[self.entry.image].draw(816, 428, 144, 144)
         game.text(654, 329, self.entry.name, 22)
-        if self.mode == "basic":
-            self.draw_basic()
-        elif self.mode == "personal":
+        if self.mode == "personal":
             self.draw_personal()
         else:
             for index, line in enumerate(self.entry.description.split(" · ")):
