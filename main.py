@@ -9,12 +9,13 @@ from time import perf_counter
 from pico2d import pico2d as p2
 import sdl2
 
+from workbench_panel import WorkbenchPanel
 from customer_board import CustomerBoard
 from enhancement_panel import EnhancementPanel
 from session_results import SessionResults
 from game_state import GameState, MATERIAL_PRICES, RECIPES
 from player import Player
-from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
+from ui import CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import EQUIPMENT, HEIGHT, MATERIALS, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
 
 
@@ -68,6 +69,7 @@ class Game:
         self.purchase_quantity = 1
         self.feedback = ""
         self.feedback_success = True
+        self.workbench_panel = WorkbenchPanel(self)
         self.customer_board = CustomerBoard(self)
         self.enhancement_panel = EnhancementPanel(self)
         self.result_screen = SessionResults(self)
@@ -159,6 +161,9 @@ class Game:
 
     def handle_click(self, x, y):
         if not self.active_station:
+            return
+        if self.active_station.name == "작업대":
+            self.workbench_panel.handle_click(x, y)
             return
         if self.active_station.name == "주문 게시판":
             self.customer_board.handle_click(x, y)
@@ -269,6 +274,9 @@ class Game:
 
     def draw_panel(self):
         station = self.active_station
+        if station.name == "작업대":
+            self.workbench_panel.draw()
+            return
         if station.name == "주문 게시판":
             self.customer_board.draw()
             return
@@ -299,14 +307,6 @@ class Game:
         self.icons[entry.image].draw(816, 428, 144, 144)
         self.text(654, 329, entry.name, 22)
         lines = entry.description.split(" · ")
-        if station.name == "작업대":
-            recipe = RECIPES[entry.image]
-            material_names = {material.image: material.name for material in MATERIALS}
-            for index, (name, quantity) in enumerate(recipe.ingredients.items()):
-                y = 279 - index * 38
-                self.text(654, y + 16, material_names[name], 15, MUTED)
-                quantity_pair(self, 785, y, self.state.materials[name], quantity)
-            lines = []
         for index, line in enumerate(lines):
             self.text(654, 300 - index * 22, line, 15, MUTED)
         if station.name == "재료 보관대":
@@ -319,12 +319,6 @@ class Game:
             self.text(722, 229, "-")
             self.text(921, 229, "+")
             quantity_badge(self, 759, 208, self.purchase_quantity, "구매", GOLD, 138)
-        elif station.name == "작업대":
-            self.text(654, 220, f"제작 시간 {RECIPES[entry.image].seconds}초", 18, GOLD)
-            if self.state.job is not None:
-                equipment_name = next(item.name for item in EQUIPMENT if item.image == self.state.job.equipment)
-                status = "완성 · 회수 가능" if self.state.ready_to_collect else f"남은 시간 {self.state.remaining:.1f}초"
-                self.text(654, 196, f"{equipment_name} · {status}", 15, GOLD)
         elif station.name == "장비 진열대":
             quantity_badge(self, 654, 244, self.state.equipment[entry.image], "보유", CYAN, 168)
             rented = sum(dict(contract.order.requirements).get(entry.image, 0)
@@ -339,7 +333,7 @@ class Game:
             self.draw_button(ACTION_BUTTON, label, available)
             if reason and not self.feedback:
                 self.text(654, 191, reason, 15, GOLD)
-        if self.feedback and not (station.name == "작업대" and self.state.job is not None):
+        if self.feedback:
             self.text(654, 191, self.feedback, 15, CYAN if self.feedback_success else GOLD)
 
     def draw_crafting_status(self):
