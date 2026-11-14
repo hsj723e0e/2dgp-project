@@ -26,8 +26,9 @@ GEAR_IMAGES = tuple(entry.image for entry in (*EQUIPMENT, *PERSONAL_EQUIPMENT[:3
 ITEM_TIERS = {entry.image: 1 for entry in MATERIALS}
 ITEM_TIERS.update({image: int(image[-2:]) + 1 for image in GEAR_IMAGES})
 ITEM_CATEGORIES = {image: image.split('_')[1] for image in GEAR_IMAGES}
+ITEM_CATEGORIES.update({'mat_01': 'parts', 'mat_02': 'composite', 'mat_03': 'circuit'})
 CATEGORY_ICON_ASSETS = {category: f'ui_category_{category}.png'
-                        for category in ('drill', 'suit', 'oxygen')}
+                        for category in ('drill', 'suit', 'oxygen', 'parts', 'composite', 'circuit')}
 
 
 def fill_rect(x, y, width, height, color, alpha=255):
