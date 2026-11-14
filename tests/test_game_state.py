@@ -135,5 +135,71 @@ class CraftingTests(unittest.TestCase):
                 self.assertEqual(sum(state.materials.values()), 0)
 
 
+class CraftMaterialStagingTests(unittest.TestCase):
+    def setUp(self):
+        self.now = 0.0
+        self.state = GameState(clock=lambda: self.now)
+        self.state.materials.update(mat_01=3, mat_03=2)
+
+    def test_exact_inventory_stages_once_and_is_not_spent_again_at_start(self):
+        for material in ("mat_01", "mat_03"):
+            self.assertTrue(self.state.stage_craft_material("eq_suit_01", material)[0])
+            self.assertEqual(self.state.materials[material], 0)
+            self.assertTrue(self.state.stage_craft_material("eq_suit_01", material)[0])
+            self.assertEqual(self.state.materials[material], 0)
+        self.assertTrue(self.state.craft_status("eq_suit_01")[0])
+        self.assertTrue(self.state.start_craft("eq_suit_01")[0])
+        self.assertFalse(self.state.staged_materials)
+        self.state.clear_craft_materials()
+        self.assertEqual(sum(self.state.materials.values()), 0)
+        self.assertFalse(self.state.start_craft("eq_suit_01")[0])
+        self.assertFalse(self.state.stage_craft_material("eq_suit_01", "mat_01")[0])
+        self.now = 12
+        self.state.update_crafting()
+        self.assertEqual(self.state.equipment["eq_suit_01"], 1)
+        self.assertEqual(sum(self.state.materials.values()), 0)
+
+    def test_unstage_and_reset_return_only_reserved_quantities_once(self):
+        before = self.state.materials.copy()
+        self.state.stage_craft_material("eq_suit_01", "mat_01")
+        self.state.stage_craft_material("eq_suit_01", "mat_03")
+        self.state.unstage_craft_material("mat_01")
+        self.state.unstage_craft_material("mat_01")
+        self.assertEqual(self.state.materials["mat_01"], 3)
+        self.assertEqual(self.state.materials["mat_03"], 0)
+        self.state.clear_craft_materials()
+        self.state.clear_craft_materials()
+        self.assertEqual(self.state.materials, before)
+        self.assertIsNone(self.state.staged_equipment)
+
+    def test_failed_staging_and_crafting_preserve_partial_reservation(self):
+        self.state.materials["mat_03"] = 0
+        self.state.stage_craft_material("eq_suit_01", "mat_01")
+        before = self.state.materials.copy()
+        staged = self.state.staged_materials.copy()
+        for equipment, material in (("eq_suit_01", "mat_03"), ("eq_suit_01", "mat_02"),
+                                    ("eq_drill_01", "mat_01"), ("unknown", "mat_01")):
+            self.assertFalse(self.state.stage_craft_material(equipment, material)[0])
+        self.assertFalse(self.state.start_craft("eq_suit_01")[0])
+        self.assertEqual(self.state.materials, before)
+        self.assertEqual(self.state.staged_materials, staged)
+
+    def test_session_end_refunds_staged_materials_and_blocks_new_staging(self):
+        before = self.state.materials.copy()
+        self.state.stage_craft_material("eq_suit_01", "mat_01")
+        self.now = self.state.session_end_at
+        self.state.finish_session()
+        self.assertEqual(self.state.materials, before)
+        self.assertFalse(self.state.staged_materials)
+        self.assertFalse(self.state.stage_craft_material("eq_suit_01", "mat_01")[0])
+
+    def test_cheat_clears_reservation_before_setting_inventory(self):
+        self.state.stage_craft_material("eq_suit_01", "mat_01")
+        self.state.apply_cheat()
+        self.state.clear_craft_materials()
+        self.assertEqual(self.state.materials["mat_01"], 999)
+        self.assertFalse(self.state.staged_materials)
+
+
 if __name__ == "__main__":
     unittest.main()

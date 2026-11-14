@@ -82,6 +82,8 @@ class GameState:
         self.equipment_units = {entry.image: [] for entry in EQUIPMENT}
         self.next_unit_id = 1
         self.job = None
+        self.staged_equipment = None
+        self.staged_materials = {}
         self.clock = clock
         self.rng = rng if rng is not None else random.Random()
         self.session_started_at = self.clock()
@@ -112,6 +114,7 @@ class GameState:
 
     def finish_session(self):
         if self.result is None and self.session_over:
+            self.clear_craft_materials()
             self.update_crafting()
             self.update_rentals()
             self.result = SessionResult(
@@ -128,6 +131,7 @@ class GameState:
     def apply_cheat(self):
         if self.session_over:
             return
+        self.clear_craft_materials()
         self.coins = 999
         for inventory in (self.materials, self.equipment, self.rewards):
             for item in inventory:
@@ -444,6 +448,36 @@ class GameState:
     def ready_to_collect(self):
         return self.job is not None and self.remaining <= 0
 
+    def stage_craft_material(self, equipment, material):
+        if self.session_over:
+            return False, "운영 시간이 종료되었습니다."
+        if self.job is not None:
+            return False, "작업대에서 장비를 제작 중입니다."
+        if equipment not in RECIPES or material not in RECIPES[equipment].ingredients:
+            return False, "해당 장비에 필요한 재료가 아닙니다."
+        if self.staged_equipment not in (None, equipment):
+            return False, "기존 조합 재료를 먼저 반환하세요."
+        if material in self.staged_materials:
+            return True, ""
+        required = RECIPES[equipment].ingredients[material]
+        if self.materials[material] < required:
+            return False, "재료가 부족합니다."
+        self.materials[material] -= required
+        self.staged_equipment = equipment
+        self.staged_materials[material] = required
+        return True, ""
+
+    def unstage_craft_material(self, material):
+        quantity = self.staged_materials.pop(material, 0)
+        if quantity:
+            self.materials[material] += quantity
+        if not self.staged_materials:
+            self.staged_equipment = None
+
+    def clear_craft_materials(self):
+        for material in tuple(self.staged_materials):
+            self.unstage_craft_material(material)
+
     def craft_status(self, equipment):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
@@ -454,7 +488,9 @@ class GameState:
                 return False, "완성품을 먼저 회수하세요."
             return False, "작업대에서 장비를 제작 중입니다."
         ingredients = RECIPES[equipment].ingredients
-        if any(self.materials[name] < quantity for name, quantity in ingredients.items()):
+        staged = self.staged_materials if self.staged_equipment == equipment else {}
+        if any(self.materials[name] + staged.get(name, 0) < quantity
+               for name, quantity in ingredients.items()):
             return False, "재료가 부족합니다."
         return True, ""
 
@@ -464,8 +500,12 @@ class GameState:
             return False, reason
         recipe = RECIPES[equipment]
         ready_at = self.clock() + recipe.seconds
+        if self.staged_equipment != equipment:
+            self.clear_craft_materials()
         for name, quantity in recipe.ingredients.items():
-            self.materials[name] -= quantity
+            self.materials[name] -= quantity - self.staged_materials.get(name, 0)
+        self.staged_materials.clear()
+        self.staged_equipment = None
         self.job = CraftJob(equipment, ready_at)
         return True, "제작을 시작했습니다. 완성품은 자동으로 회수됩니다."
 

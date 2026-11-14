@@ -40,10 +40,13 @@ def slot_bounds(index):
 class WorkbenchPanel:
     def __init__(self, game):
         self.game = game
-        self.loaded_materials = set()
+
+    @property
+    def loaded_materials(self):
+        return self.game.state.staged_materials.keys()
 
     def reset(self):
-        self.loaded_materials.clear()
+        self.game.state.clear_craft_materials()
 
     def ingredients(self):
         entry = EQUIPMENT[self.game.selected_entry]
@@ -51,15 +54,8 @@ class WorkbenchPanel:
 
     def load_material(self, material):
         game = self.game
-        if game.state.job is not None or material not in self.ingredients():
-            return
-        required = self.ingredients()[material]
-        if game.state.materials[material] < required:
-            game.feedback_success = False
-            game.feedback = f'{MATERIAL_NAMES[material]}이 부족합니다.'
-            return
-        self.loaded_materials.add(material)
-        game.feedback = ''
+        entry = EQUIPMENT[game.selected_entry]
+        game.feedback_success, game.feedback = game.state.stage_craft_material(entry.image, material)
 
     def action_status(self):
         game = self.game
@@ -69,7 +65,7 @@ class WorkbenchPanel:
         available, reason = game.state.craft_status(entry.image)
         if not available:
             return '제작', False, reason
-        if not self.loaded_materials.issuperset(self.ingredients()):
+        if not all(material in self.loaded_materials for material in self.ingredients()):
             return '제작', False, '아래 필요 재료를 클릭해 조합 슬롯에 넣으세요.'
         return '제작', True, ''
 
@@ -113,7 +109,7 @@ class WorkbenchPanel:
                 self.load_material(material)
                 return
             if contains(slot_bounds(index), x, y) and game.state.job is None:
-                self.loaded_materials.discard(material)
+                game.state.unstage_craft_material(material)
                 game.feedback = ''
                 return
 
@@ -154,8 +150,12 @@ class WorkbenchPanel:
         for index, (material, required) in enumerate(recipe.ingredients.items()):
             left, bottom, right, top = slot_bounds(index)
             loaded = current_job or material in self.loaded_materials
+            border_width = 3 if loaded else 1
+            if loaded:
+                fill_rect(left - 2, bottom - 2, right - left + 4, top - bottom + 4, (30, 69, 69))
             fill_rect(left, bottom, right - left, top - bottom, CYAN if loaded else BORDER)
-            fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
+            fill_rect(left + border_width, bottom + border_width,
+                      right - left - border_width * 2, top - bottom - border_width * 2, SURFACE)
             game.text(left + 14, 378, f'재료 {index + 1}', 15, CYAN if loaded else MUTED)
             game.icons[material].draw(left + 31, 343, 42, 42)
             game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
@@ -202,7 +202,7 @@ class WorkbenchPanel:
             left, bottom, right, top = material_bounds(index)
             owned = state.materials[material]
             loaded = current_job or material in self.loaded_materials
-            enough = owned >= required
+            enough = material in self.loaded_materials or owned >= required
             color = CYAN if enough else RED
             hovered = contains(material_bounds(index), *game.mouse)
             fill_rect(left, bottom, right - left, top - bottom, BORDER if loaded or hovered else SURFACE)
