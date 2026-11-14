@@ -347,7 +347,10 @@ class Game:
             return
         name = next(entry.name for entry in EQUIPMENT if entry.image == self.state.job.equipment)
         fill_rect(366, 665, 600, 39, INK, 240)
-        self.text(382, 687, f"{name} 제작 중 · {self.state.remaining:.1f}초", 18, GOLD)
+        self.text(382, 687, f"{name} 제작 중", 18)
+        fill_rect(814, 675, 98, 26, (53, 45, 30))
+        self.text(824, 687, f"{self.state.remaining:.1f}", 26, GOLD)
+        self.text(923, 687, "초", 18, MUTED)
         progress = 1 - self.state.remaining / RECIPES[self.state.job.equipment].seconds
         fill_rect(382, 669, 568, 3, (40, 68, 83))
         fill_rect(382, 669, 568 * progress, 3, CYAN)

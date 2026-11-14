@@ -33,8 +33,8 @@ def material_bounds(index):
 
 
 def slot_bounds(index):
-    left = 260 + index * 204
-    return (left, 310, left + 180, 397)
+    left = 196 + index * 270
+    return (left, 310, left + 254, 397)
 
 
 class WorkbenchPanel:
@@ -159,20 +159,28 @@ class WorkbenchPanel:
             loaded = current_job or material in self.loaded_materials
             fill_rect(left, bottom, right - left, top - bottom, CYAN if loaded else BORDER)
             fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
+            game.text(left + 14, 378, f'재료 {index + 1}', 15, CYAN if loaded else MUTED)
             if loaded:
-                game.icons[material].draw((left + right) / 2, 365, 48, 48)
-                game.text(left + 13, 327, f'{MATERIAL_NAMES[material]}  ×{required}', 15, CYAN)
+                game.icons[material].draw(left + 31, 343, 42, 42)
             else:
-                game.text(left + 65, 366, '+', 26, BORDER)
-                game.text(left + 65, 334, f'재료 {index + 1}', 15, MUTED)
+                game.text(left + 20, 343, '+', 26, BORDER)
+            game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
+            game.text(left + 178, 343, '×', 18, MUTED)
+            fill_rect(left + 199, 325, 43, 35, (53, 45, 30))
+            game.text(left + 211, 343, str(required), 26, GOLD)
         if state.job is None:
-            game.text(369, 287, f'제작 시간  {recipe.seconds}초', 18, GOLD)
+            game.text(344, 291, '제작 시간', 18, MUTED)
+            seconds = str(recipe.seconds)
         else:
             job = next(item for item in EQUIPMENT if item.image == state.job.equipment)
-            game.text(260, 287, f'{job.name} 제작 중 · {state.remaining:.1f}초', 18, GOLD)
+            game.text(196, 291, f'{job.name} 제작 중', 18, MUTED)
+            seconds = f'{state.remaining:.1f}'
             progress = 1 - state.remaining / RECIPES[state.job.equipment].seconds
-            fill_rect(260, 276, 384, 3, SURFACE)
-            fill_rect(260, 276, 384 * max(0, min(1, progress)), 3, GOLD)
+            fill_rect(260, 273, 384, 3, SURFACE)
+            fill_rect(260, 273, 384 * max(0, min(1, progress)), 3, GOLD)
+        fill_rect(496, 277, 94, 28, (53, 45, 30))
+        game.text(507, 291, seconds, 26, GOLD)
+        game.text(600, 291, '초', 18, MUTED)
         label, available, reason = self.action_status()
         self.button(ACTION_BUTTON, label, available, primary=True)
         message = game.feedback if state.job is None and game.feedback else reason
@@ -197,7 +205,7 @@ class WorkbenchPanel:
             game.icons[item.image].draw(left + 28, bottom + 23, 40, 40)
             game.text(left + 59, bottom + 23, item.name, 18, GOLD if selected else CREAM)
             fill_rect(1052, bottom + 8, 64, 30, INK)
-            game.text(1061, bottom + 23, str(state.equipment[item.image]), 18, GOLD)
+            game.text(1061, bottom + 23, str(state.equipment[item.image]), 22, GOLD)
 
         # Only the selected recipe's materials are offered in the bottom strip.
         fill_rect(152, 195, 976, 1, BORDER)
@@ -213,8 +221,9 @@ class WorkbenchPanel:
             fill_rect(left, bottom, right - left, top - bottom, BORDER if loaded or hovered else SURFACE)
             fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
             game.icons[material].draw(left + 33, bottom + 34, 48, 48)
-            game.text(left + 68, bottom + 46, f'{index + 1}  {MATERIAL_NAMES[material]}', 18)
-            game.text(left + 68, bottom + 19, f'보유 {owned}', 18, color)
-            game.text(left + 190, bottom + 19, f'/ 필요 {required}', 18, GOLD)
+            game.text(left + 68, bottom + 46, MATERIAL_NAMES[material], 18)
+            game.text(left + 68, bottom + 19, '보유', 15, MUTED)
+            fill_rect(left + 121, bottom + 5, 90, 29, INK)
+            game.text(left + 133, bottom + 20, str(owned), 26, color)
         game.text(831, 143, '제작 완료 시 자동 회수', 18, CYAN)
         game.text(831, 116, '재료는 제작 시작 시 사용', 15, MUTED)
