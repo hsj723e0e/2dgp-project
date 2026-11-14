@@ -35,14 +35,20 @@ def storage_recipe_bounds(index):
     return (116, top - 46, 366, top)
 
 
-def draw_grid(game, origin, items, columns, rows, selected_unit_id=None):
+def draw_grid(game, origin, items, columns, rows, selected_unit_id=None,
+              selected_unit_ids=(), eligible_unit_ids=None):
     hovered = None
+    selected_ids = set(selected_unit_ids)
+    if selected_unit_id is not None:
+        selected_ids.add(selected_unit_id)
     for index in range(columns * rows):
         bounds = slot_bounds(origin, index, columns)
         left, bottom, right, top = bounds
-        active = contains(bounds, *game.mouse)
-        selected = (selected_unit_id is not None and index < len(items)
-                    and items[index].unit_id == selected_unit_id)
+        disabled = (index < len(items) and eligible_unit_ids is not None
+                    and items[index].unit_id not in eligible_unit_ids)
+        active = contains(bounds, *game.mouse) and not disabled
+        selected = (index < len(items) and items[index].unit_id is not None
+                    and items[index].unit_id in selected_ids)
         color = CYAN if active else BORDER
         border_width = 1
         if selected:
@@ -60,7 +66,9 @@ def draw_grid(game, origin, items, columns, rows, selected_unit_id=None):
             game.text(left + 27, bottom + 12, f'+{item.level}', 15, GOLD)
         else:
             fill_rect(left + 5, bottom + 2, 53, 20, INK)
-            game.text(left + 9, bottom + 12, str(item.quantity), 22, CYAN)
+            game.text(left + 9, bottom + 12, str(item.quantity), 22 if item.quantity < 1000 else 15, CYAN)
+        if disabled:
+            fill_rect(left + 1, bottom + 1, SLOT_SIZE - 2, SLOT_SIZE - 2, INK, 190)
         if active:
             hovered = item
     return hovered

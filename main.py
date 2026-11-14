@@ -425,7 +425,9 @@ class Game:
                 controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2 투입   SPACE 제작   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
                 controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
-                if self.customer_board.unit_action:
+                if self.customer_board.unit_action == "rent":
+                    controls = "가방 장비 클릭 선택   요구 수량 모두 선택 시 즉시 대여   ESC 취소"
+                elif self.customer_board.unit_action:
                     controls = "↑ ↓ 요청 선택   ← → 장비 선택   SPACE 확정   ESC 취소"
             elif self.active_station.name == "강화 장치":
                 controls = "TAB 분류 전환   ↑ ↓ 종류   SPACE 제작 / 강화   E / ESC 닫기"

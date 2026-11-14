@@ -1,10 +1,12 @@
 """The live customer order panel shown at the workshop's noticeboard."""
 
+from collections import Counter
+
 import sdl2
 
 from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, REWARD_NAMES
-from game_state import rental_success_probability
-from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge, quantity_pair
+from inventory_panel import draw_grid, slot_bounds
+from ui import CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import EQUIPMENT, HEIGHT, WIDTH
 
 
@@ -17,6 +19,7 @@ CONFIRM_UNITS = (275, 120, 495, 176)
 CANCEL_UNITS = (785, 120, 1005, 176)
 PREVIOUS_UNIT = (708, 211, 780, 243)
 NEXT_UNIT = (900, 211, 972, 243)
+RENTAL_INVENTORY_ORIGIN = (308, 472)
 EQUIPMENT_NAMES = {entry.image: entry.name for entry in EQUIPMENT}
 
 
@@ -52,7 +55,9 @@ class CustomerBoard:
             return
         self.unit_action = action
         self.selection_order_id = order.identifier
-        self.chosen_units = [unit.identifier for unit in state.order_units(order)]
+        self.chosen_units = []
+        if action == "sell":
+            self.chosen_units = [unit.identifier for unit in state.order_units(order)]
         self.selected_slot = 0
         self.game.feedback = ""
 
@@ -83,6 +88,10 @@ class CustomerBoard:
         self.selected_contract = 0
 
     def handle_key(self, key):
+        if self.unit_action == "rent":
+            if key == sdl2.SDLK_ESCAPE:
+                self.cancel_selection()
+            return
         if self.unit_action:
             if key in (sdl2.SDLK_UP, sdl2.SDLK_w):
                 self.selected_slot = (self.selected_slot - 1) % len(self.chosen_units)
@@ -114,6 +123,11 @@ class CustomerBoard:
     def handle_click(self, x, y):
         if contains(CLOSE, x, y):
             self.game.close_panel()
+        elif self.unit_action == "rent":
+            if contains(CANCEL_UNITS, x, y):
+                self.cancel_selection()
+            else:
+                self.select_rental_item(x, y)
         elif self.unit_action:
             if contains(CONFIRM_UNITS, x, y):
                 self.confirm_selection()
@@ -145,6 +159,28 @@ class CustomerBoard:
         elif contains(RENT, x, y):
             self.rent()
 
+    def select_rental_item(self, x, y):
+        state = self.game.state
+        order = state.current_order
+        if order is None or order.identifier != self.selection_order_id:
+            self.cancel_selection()
+            return
+        items = state.inventory_items()
+        selected = Counter(item.image for item in items if item.unit_id in self.chosen_units)
+        required = dict(order.requirements)
+        for index, item in enumerate(items):
+            if not contains(slot_bounds(RENTAL_INVENTORY_ORIGIN, index, 3), x, y):
+                continue
+            if item.unit_id is None or item.image not in required:
+                return
+            if item.unit_id in self.chosen_units:
+                self.chosen_units.remove(item.unit_id)
+            elif selected[item.image] < required[item.image]:
+                self.chosen_units.append(item.unit_id)
+            if len(self.chosen_units) == order.quantity:
+                self.confirm_selection()
+            return
+
     def rent(self):
         order = self.game.state.current_order
         if order is not None and order.customer != "npc_broker":
@@ -167,7 +203,7 @@ class CustomerBoard:
 
     def draw(self):
         game, state = self.game, self.game.state
-        fill_rect(0, 0, WIDTH, HEIGHT, INK, 155)
+        fill_rect(0, 44, WIDTH, HEIGHT - 44, INK, 155)
         game.draw_panel_frame()
         if self.unit_action:
             self.draw_unit_selection()
@@ -188,19 +224,29 @@ class CustomerBoard:
             game.text(340, 380, f"다음 방문까지 {state.next_customer_in:.1f}초", 22, GOLD)
         else:
             game.text(278, 534, f"{CUSTOMER_NAMES[order.customer]}의 주문", 18, MUTED)
-            if order.customer != "npc_broker":
-                quantity_badge(game, 610, 518, order.quantity, "총", GOLD)
             game.icons[order.customer].draw(870, 430, 152, 152)
             game.text(766, 329, CUSTOMER_NAMES[order.customer], 22)
             for index, (equipment, quantity) in enumerate(order.requirements):
-                y = 470 - index * 60
-                owned = state.equipment[equipment]
-                fill_rect(275, y - 26, 440, 52, (20, 40, 56))
-                if owned < quantity:
-                    fill_rect(275, y - 26, 3, 52, RED)
-                game.icons[equipment].draw(305, y, 42, 42)
-                game.text(339, y, EQUIPMENT_NAMES[equipment], 18)
-                quantity_pair(game, 495, y - 16, owned, quantity, "요구")
+                y = 480 - index * 38
+                fill_rect(275, y - 17, 440, 34, (20, 40, 56))
+                if state.equipment[equipment] < quantity:
+                    fill_rect(275, y - 17, 3, 34, RED)
+                game.icons[equipment].draw(301, y, 34, 34)
+                game.text(328, y, EQUIPMENT_NAMES[equipment], 18)
+                game.text(535, y, '×', 18, MUTED)
+                game.text(565, y, str(quantity), 26, GOLD)
+            if order.customer != "npc_broker":
+                game.text(278, 333, "보유 아이템", 15, MUTED)
+                owned = Counter()
+                for item in state.inventory_items():
+                    owned[item.image] += item.quantity
+                if not owned:
+                    game.text(278, 289, "보유 아이템 없음", 18, MUTED)
+                for index, (image, quantity) in enumerate(owned.items()):
+                    x = 275 + index * 48
+                    fill_rect(x, 263, 44, 58, (20, 40, 56))
+                    game.icons[image].draw(x + 22, 300, 36, 36)
+                    game.text(x + 5, 277, str(quantity), 22 if quantity < 1000 else 15, CYAN)
             if order.customer == "npc_broker":
                 game.text(278, 465, "코인을 받고 다음 시장 사건을 알려드립니다.", 18)
                 game.text(278, 425, f"정보 가격 {INFORMATION_PRICE} 코인", 22, GOLD)
@@ -209,11 +255,17 @@ class CustomerBoard:
             else:
                 available, reason = state.order_status(order.identifier)
                 value = state.sale_value(order)
-                game.text(766, 300, f"판매 {value} 코인", 18, GOLD)
+                fill_rect(752, 246, 116, 70, (20, 40, 56))
+                fill_rect(880, 246, 128, 70, (20, 40, 56))
+                game.text(762, 301, "판매 시", 15, MUTED)
+                game.text(762, 270, str(value), 26, GOLD)
+                game.text(825, 270, "코인", 18, MUTED)
                 reward, amount = state.rental_reward(order)
-                game.text(766, 278, f"대여 {REWARD_NAMES[reward]} {amount}개" if reward != "coins" else f"대여 {amount} 코인", 15, CYAN)
-                game.text(766, 256, f"대여 {RENTAL_DURATIONS[order.customer]}초 · 장비 직접 선택", 15, MUTED)
-                game.draw_button(SELL, f"1 판매 +{value} 코인", available)
+                game.text(890, 301, "대여 시", 15, MUTED)
+                game.text(890, 280, REWARD_NAMES[reward], 15, MUTED)
+                game.text(890, 260, str(amount), 22, CYAN)
+                game.text(932, 260, "코인" if reward == "coins" else "개", 15, MUTED)
+                game.draw_button(SELL, "1 판매하기", available)
                 game.draw_button(RENT, "2 대여하기", available)
             if reason and not game.feedback:
                 game.text(278, 224, reason, 15, GOLD)
@@ -271,7 +323,44 @@ class CustomerBoard:
         else:
             game.text(758, 118, f"계약 성공률 {contract.success_probability:.1%}", 15, MUTED)
 
+    def draw_rental_inventory(self):
+        game, state = self.game, self.game.state
+        order = state.current_order
+        if order is None or order.identifier != self.selection_order_id:
+            self.cancel_selection()
+            return
+        items = state.inventory_items()
+        required = dict(order.requirements)
+        selected = Counter(item.image for item in items if item.unit_id in self.chosen_units)
+        eligible = {item.unit_id for item in items
+                    if item.unit_id is not None and item.image in required
+                    and (selected[item.image] < required[item.image] or item.unit_id in self.chosen_units)}
+        game.text(278, 572, "대여 장비 선택", 30)
+        game.text(278, 534, "필요한 장비를 모두 클릭하면 대여가 시작됩니다.", 18, MUTED)
+        game.draw_button(CLOSE, "닫기")
+        fill_rect(275, 510, 730, 2, (61, 87, 103))
+        game.text(278, 493, "캐릭터 인벤토리", 18, MUTED)
+        game.text(535, 493, f"{len(items)} / 9", 22, GOLD)
+        draw_grid(game, RENTAL_INVENTORY_ORIGIN, items, 3, 3,
+                  selected_unit_ids=self.chosen_units, eligible_unit_ids=eligible)
+        game.text(308, 255, f"선택  {len(self.chosen_units)} / {order.quantity}", 22, CYAN)
+        for index, (equipment, quantity) in enumerate(order.requirements):
+            y = 470 - index * 50
+            game.icons[equipment].draw(675, y - 5, 38, 38)
+            game.text(708, y + 3, EQUIPMENT_NAMES[equipment], 18)
+            game.text(929, y + 3, '×', 18, MUTED)
+            game.text(957, y + 3, str(quantity), 22, GOLD)
+            color = CYAN if selected[equipment] == quantity else MUTED
+            game.text(708, y - 17, f"선택 {selected[equipment]} / {quantity}", 15, color)
+        game.text(654, 249, "대여 시간", 18, MUTED)
+        quantity_badge(game, 768, 233, RENTAL_DURATIONS[order.customer], "", GOLD, 92)
+        game.text(875, 249, "초", 18, MUTED)
+        game.draw_button(CANCEL_UNITS, "취소")
+
     def draw_unit_selection(self):
+        if self.unit_action == "rent":
+            self.draw_rental_inventory()
+            return
         game = self.game
         units = self.selected_units()
         title = "판매 장비 선택" if self.unit_action == "sell" else "대여 장비 선택"
@@ -295,7 +384,5 @@ class CustomerBoard:
         game.text(654, 260, f"보유 장비 {position} / {len(available)}", 18, MUTED)
         game.draw_button(PREVIOUS_UNIT, "←")
         game.draw_button(NEXT_UNIT, "→")
-        if self.unit_action == "rent":
-            game.text(654, 190, f"선택 장비 성공률 {rental_success_probability(units):.1%}", 18, GOLD)
         game.draw_button(CONFIRM_UNITS, "선택 확정")
         game.draw_button(CANCEL_UNITS, "취소")
