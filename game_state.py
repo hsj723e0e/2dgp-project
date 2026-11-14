@@ -112,6 +112,7 @@ class GameState:
 
     def finish_session(self):
         if self.result is None and self.session_over:
+            self.update_crafting()
             self.update_rentals()
             self.result = SessionResult(
                 personal_levels=tuple(self.personal_equipment.items()),
@@ -466,7 +467,7 @@ class GameState:
         for name, quantity in recipe.ingredients.items():
             self.materials[name] -= quantity
         self.job = CraftJob(equipment, ready_at)
-        return True, "제작을 시작했습니다. 완성 후 회수하세요."
+        return True, "제작을 시작했습니다. 완성품은 자동으로 회수됩니다."
 
     def collect(self):
         if self.session_over:
@@ -475,7 +476,17 @@ class GameState:
             return False, "회수할 완성품이 없습니다."
         if not self.ready_to_collect:
             return False, "아직 제작 중입니다."
-        self.add_equipment(self.job.equipment, 1)
+        self.update_crafting()
+        return True, "완성된 장비 1개를 회수했습니다."
+
+    def update_crafting(self):
+        """Settle a completed job once, including completions at the session deadline."""
+        if self.result is not None or self.job is None:
+            return None
+        if self.job.ready_at > self.effective_time:
+            return None
+        equipment = self.job.equipment
+        self.add_equipment(equipment, 1)
         self.collected_equipment_count += 1
         self.job = None
-        return True, "완성된 장비 1개를 회수했습니다."
+        return equipment

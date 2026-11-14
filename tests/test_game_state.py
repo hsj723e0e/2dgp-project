@@ -84,6 +84,34 @@ class CraftingTests(unittest.TestCase):
         self.assertFalse(self.state.collect()[0])
         self.assertEqual(sum(self.state.equipment.values()), 1)
 
+    def test_automatic_collection_at_completion_boundary_is_idempotent(self):
+        self.state.start_craft("eq_drill_01")
+        self.now = 109.999
+        self.assertIsNone(self.state.update_crafting())
+        self.assertEqual(self.state.equipment["eq_drill_01"], 0)
+        self.now = 110
+        self.assertEqual(self.state.update_crafting(), "eq_drill_01")
+        self.assertEqual(self.state.equipment["eq_drill_01"], 1)
+        self.assertEqual(len(self.state.available_units("eq_drill_01")), 1)
+        self.assertEqual(self.state.collected_equipment_count, 1)
+        self.assertIsNone(self.state.update_crafting())
+        self.assertEqual(self.state.equipment["eq_drill_01"], 1)
+        self.assertTrue(self.state.start_craft("eq_suit_01")[0])
+
+    def test_delayed_frame_collects_only_jobs_due_by_session_end(self):
+        for duration, expected in ((10, 1), (9, 0)):
+            with self.subTest(duration=duration):
+                now = [0.0]
+                state = GameState(clock=lambda: now[0], session_duration=duration)
+                state.materials.update(mat_01=2, mat_03=1)
+                self.assertTrue(state.start_craft("eq_drill_01")[0])
+                now[0] = 100
+                result = state.finish_session()
+                self.assertEqual(result.collected_equipment, expected)
+                self.assertEqual(state.equipment["eq_drill_01"], expected)
+                self.assertIsNone(state.update_crafting())
+                self.assertEqual(state.equipment["eq_drill_01"], expected)
+
     def test_failed_craft_keeps_every_material(self):
         state = GameState()
         state.purchase("mat_01", 2)
