@@ -61,6 +61,8 @@ class WorkbenchPanel:
         game = self.game
         entry = EQUIPMENT[game.selected_entry]
         if game.state.job is not None:
+            if game.state.ready_to_collect:
+                return '가방 공간 대기', False, ''
             return '제작 중', False, ''
         available, reason = game.state.craft_status(entry.image)
         if not available:
@@ -167,14 +169,16 @@ class WorkbenchPanel:
             seconds = str(recipe.seconds)
         else:
             job = next(item for item in EQUIPMENT if item.image == state.job.equipment)
-            game.text(196, 291, f'{job.name} 제작 중', 18, MUTED)
+            status = '완성 · 가방 공간 대기' if state.ready_to_collect else '제작 중'
+            game.text(196, 291, f'{job.name} {status}', 18, MUTED)
             seconds = f'{state.remaining:.1f}'
             progress = 1 - state.remaining / RECIPES[state.job.equipment].seconds
             fill_rect(260, 273, 384, 3, SURFACE)
             fill_rect(260, 273, 384 * max(0, min(1, progress)), 3, GOLD)
-        fill_rect(496, 277, 94, 28, (53, 45, 30))
-        game.text(507, 291, seconds, 26, GOLD)
-        game.text(600, 291, '초', 18, MUTED)
+        if not state.ready_to_collect:
+            fill_rect(496, 277, 94, 28, (53, 45, 30))
+            game.text(507, 291, seconds, 26, GOLD)
+            game.text(600, 291, '초', 18, MUTED)
         label, available, _ = self.action_status()
         self.button(ACTION_BUTTON, label, available, primary=True)
 
