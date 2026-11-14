@@ -141,10 +141,8 @@ class Game:
                 self.result_screen.handle_event(event)
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key == sdl2.SDLK_F10:
-                    self.state.apply_cheat()
+                    self.feedback_success, self.feedback = self.state.apply_cheat()
                     self.customer_board.cancel_selection()
-                    self.feedback = "F10 · 코인·기본 재료 999 적용"
-                    self.feedback_success = True
                 elif (self.active_station and self.active_station.name == "주문 게시판"
                       and self.customer_board.unit_action and event.key in (sdl2.SDLK_RETURN, sdl2.SDLK_ESCAPE)):
                     self.customer_board.handle_key(event.key)
@@ -446,6 +444,9 @@ class Game:
         self.draw_crafting_status()
         self.draw_coin_counter()
         self.draw_session_timer()
+        if self.feedback.startswith("F10") and not self.feedback_success:
+            fill_rect(366, 622, 600, 32, INK, 240)
+            self.text(382, 638, self.feedback, 15, RED)
         if self.state.rentals:
             active = sum(contract.status in ("active", "returning") for contract in self.state.rentals)
             completed = len(self.state.rentals) - active

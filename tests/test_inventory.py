@@ -132,6 +132,45 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(self.state.rewards, rewards)
         self.assertEqual(self.state.inventory_used, 5)
 
+    def test_cheat_stores_only_needed_equipment_and_preserves_levels(self):
+        self.state.add_equipment("eq_drill_01", 9)
+        units = self.state.available_units("eq_drill_01")
+        units[0].level = 7
+        self.assertTrue(self.state.apply_cheat()[0])
+        self.assertTrue(all(count == 999 for count in self.state.materials.values()))
+        self.assertEqual(self.state.inventory_used, 9)
+        self.assertEqual(self.state.equipment["eq_drill_01"], 6)
+        self.assertEqual(self.state.storage_units["eq_drill_01"], list(units[:3]))
+        self.assertEqual(units[0].level, 7)
+        self.state.apply_cheat()
+        self.assertEqual(len(self.state.storage_units["eq_drill_01"]), 3)
+
+    def test_cheat_skips_full_chests_and_moves_another_equipment_type(self):
+        self.state.storage_units["eq_drill_01"] = [self.state.new_equipment_unit("eq_drill_01") for _ in range(28)]
+        self.state.add_equipment("eq_drill_01", 6)
+        self.state.add_equipment("eq_suit_01", 3)
+        self.assertTrue(self.state.apply_cheat()[0])
+        self.assertEqual(len(self.state.storage_units["eq_drill_01"]), 28)
+        self.assertEqual(len(self.state.storage_units["eq_suit_01"]), 3)
+        self.assertEqual(self.state.inventory_used, 9)
+
+    def test_cheat_does_not_overfill_or_partially_move_items_when_storage_is_insufficient(self):
+        self.state.storage_units["eq_drill_01"] = [self.state.new_equipment_unit("eq_drill_01") for _ in range(27)]
+        self.state.add_equipment("eq_drill_01", 9)
+        before = self.state.available_units("eq_drill_01")
+        success, message = self.state.apply_cheat()
+        self.assertFalse(success)
+        self.assertIn("공간 부족", message)
+        self.assertEqual(self.state.available_units("eq_drill_01"), before)
+        self.assertEqual(len(self.state.storage_units["eq_drill_01"]), 27)
+        self.assertEqual(self.state.inventory_used, 9)
+        self.assertTrue(all(count == 0 for count in self.state.materials.values()))
+        self.state.store_equipment("eq_drill_01", before[0].identifier)
+        self.state.take_units(before[1:3])
+        self.assertTrue(self.state.apply_cheat()[0])
+        self.assertTrue(all(count == 999 for count in self.state.materials.values()))
+        self.assertEqual(self.state.inventory_used, 9)
+
     def test_session_result_includes_pending_returns_and_freezes_delivery(self):
         self.state.add_equipment("eq_drill_01", 1)
         self.state.current_order = Order(52, "npc_novice", (("eq_drill_01", 1),))

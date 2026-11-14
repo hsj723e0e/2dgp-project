@@ -141,11 +141,29 @@ class GameState:
 
     def apply_cheat(self):
         if self.session_over:
-            return
+            return False, "운영 시간이 종료되었습니다."
         self.coins = 999
+        missing = [material for material in MATERIAL_PRICES
+                   if self.materials[material] == 0 and material not in self.staged_materials]
+        needed = max(0, len(missing) - self.inventory_free)
+        to_store = []
+        for equipment in self.equipment:
+            space = max(0, CHEST_CAPACITY - len(self.storage_units[equipment]))
+            count = min(space, needed - len(to_store))
+            to_store.extend(self.available_units(equipment)[:count])
+            if len(to_store) == needed:
+                break
+        if len(to_store) < needed:
+            for material in MATERIAL_PRICES:
+                if material not in missing:
+                    self.materials[material] = 999
+            return False, "F10 · 코인·기존 재료 충전 / 보관함 공간 부족"
+        self.take_units(to_store)
+        for unit in to_store:
+            self.storage_units[unit.equipment].append(unit)
         for material in MATERIAL_PRICES:
-            if self.materials[material] > 0 or material in self.staged_materials or self.inventory_free > 0:
-                self.materials[material] = 999
+            self.materials[material] = 999
+        return True, "F10 · 코인·기본 재료 999 적용"
 
     @property
     def inventory_used(self):
