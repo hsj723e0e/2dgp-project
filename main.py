@@ -239,9 +239,7 @@ class Game:
         if completed is not None:
             self.workbench_panel.reset()
             if self.active_station and self.active_station.name == "작업대":
-                name = next(entry.name for entry in EQUIPMENT if entry.image == completed)
-                self.feedback = f"{name} 1개 제작 완료 · 자동 회수되었습니다."
-                self.feedback_success = True
+                self.feedback = ""
         if self.state.finish_session() is not None:
             return
         self.state.update_rentals()

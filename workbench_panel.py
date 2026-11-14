@@ -151,19 +151,13 @@ class WorkbenchPanel:
         fill_rect(386, 459, 136, 106, BORDER)
         fill_rect(387, 460, 134, 104, SURFACE)
         game.icons[entry.image].draw(454, 512, 96, 96)
-        game.text(327, 437, entry.name, 26)
-        count = len(self.ingredients()) if current_job else len(self.loaded_materials)
-        game.text(279, 415, f'조합 재료  {count} / {len(recipe.ingredients)}', 18, MUTED)
         for index, (material, required) in enumerate(recipe.ingredients.items()):
             left, bottom, right, top = slot_bounds(index)
             loaded = current_job or material in self.loaded_materials
             fill_rect(left, bottom, right - left, top - bottom, CYAN if loaded else BORDER)
             fill_rect(left + 1, bottom + 1, right - left - 2, top - bottom - 2, SURFACE)
             game.text(left + 14, 378, f'재료 {index + 1}', 15, CYAN if loaded else MUTED)
-            if loaded:
-                game.icons[material].draw(left + 31, 343, 42, 42)
-            else:
-                game.text(left + 20, 343, '+', 26, BORDER)
+            game.icons[material].draw(left + 31, 343, 42, 42)
             game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
             game.text(left + 178, 343, '×', 18, MUTED)
             fill_rect(left + 199, 325, 43, 35, (53, 45, 30))
@@ -181,15 +175,8 @@ class WorkbenchPanel:
         fill_rect(496, 277, 94, 28, (53, 45, 30))
         game.text(507, 291, seconds, 26, GOLD)
         game.text(600, 291, '초', 18, MUTED)
-        label, available, reason = self.action_status()
+        label, available, _ = self.action_status()
         self.button(ACTION_BUTTON, label, available, primary=True)
-        message = game.feedback if state.job is None and game.feedback else reason
-        if state.job is not None:
-            message = '완성품은 자동으로 회수됩니다.'
-        color = MUTED
-        if game.feedback:
-            color = CYAN if game.feedback_success else RED
-        game.text(168, 211, message, 15, color)
 
         fill_rect(764, 224, 1, 334, BORDER)
         game.text(790, 551, '제작 목록', 18)
@@ -225,5 +212,3 @@ class WorkbenchPanel:
             game.text(left + 68, bottom + 19, '보유', 15, MUTED)
             fill_rect(left + 121, bottom + 5, 90, 29, INK)
             game.text(left + 133, bottom + 20, str(owned), 26, color)
-        game.text(831, 143, '제작 완료 시 자동 회수', 18, CYAN)
-        game.text(831, 116, '재료는 제작 시작 시 사용', 15, MUTED)
