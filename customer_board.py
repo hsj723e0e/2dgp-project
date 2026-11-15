@@ -229,8 +229,8 @@ class CustomerBoard:
             for index, (equipment, quantity) in enumerate(order.requirements):
                 y = 480 - index * 38
                 fill_rect(275, y - 17, 440, 34, (20, 40, 56))
-                if state.equipment[equipment] < quantity:
-                    fill_rect(275, y - 17, 3, 34, RED)
+                if state.equipment[equipment] == 0:
+                    game.text(612, y, "없음!", 18, RED)
                 draw_item_icon(game, equipment, 301, y, 34, 34)
                 game.text(328, y, EQUIPMENT_NAMES[equipment], 18)
                 game.text(535, y, '×', 18, MUTED)
@@ -242,11 +242,14 @@ class CustomerBoard:
                     owned[item.image] += item.quantity
                 if not owned:
                     game.text(278, 289, "보유 아이템 없음", 18, MUTED)
+                requested_images = {image for image, _ in order.requirements}
                 for index, (image, quantity) in enumerate(owned.items()):
                     x = 275 + index * 48
-                    fill_rect(x, 263, 44, 58, (20, 40, 56))
-                    draw_item_icon(game, image, x + 22, 300, 36, 36)
-                    game.text(x + 5, 277, str(quantity), 22 if quantity < 1000 else 15, CYAN)
+                    requested = image in requested_images
+                    fill_rect(x, 263, 44, 58, (20, 40, 56) if requested else (30, 30, 30))
+                    draw_item_icon(game, image, x + 22, 300, 36, 36, grayscale=not requested)
+                    game.text(x + 5, 277, str(quantity), 22 if quantity < 1000 else 15,
+                              CYAN if requested else (160, 160, 160))
             if order.customer == "npc_broker":
                 game.text(278, 465, "코인을 받고 다음 시장 사건을 알려드립니다.", 18)
                 game.text(278, 425, f"정보 가격 {INFORMATION_PRICE} 코인", 22, GOLD)
