@@ -231,3 +231,11 @@ parts subject = A warm amber-yellow mechanical cogwheel with a large dark circul
 composite subject = Three clearly separated stacked metal plates shown diagonally in isometric view, indicating advanced composite material. Use pale lavender #B6A5FF with a few darker separating edges.
 circuit subject = A bright green microchip with a solid square centre and four short thick pins on each side, indicating electronic circuits. Use lime green #A4F56B with a dark square cutout in the centre.
 ```
+
+
+코인 에셋 `asset/ui_coin.png`는 내장 ImageGen으로 생성한 투명 PNG를 64×64로 정규화했습니다.
+생성 프롬프트는 다음과 같습니다.
+
+```text
+Use case: stylized-concept. Asset type: currency icon for a pixel-art space workshop crafting game. Draw ONE gold coin, shown almost front-facing with a slight three-quarter thickness. Bold circular silhouette, warm golden face, bright yellow top-left rim highlight, darker amber stepped rim and a few simple pixel reflections. A single recessed four-point star engraved in the centre suggests space exploration. Crisp chunky pixel-art edges, limited gold palette, strong contrast and simple readable shapes suitable for display at 24x24 or 32x32 pixels. Coin centred and occupying 85 percent of the square canvas. No letters, no numerals, no text, no extra coins, no floating sparkles, no drop shadow, no frame or badge. Genuine transparent background. Production-ready standalone game currency sprite.
+```
