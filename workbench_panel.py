@@ -183,7 +183,7 @@ class WorkbenchPanel:
         self.button(ACTION_BUTTON, label, available, primary=True)
 
         fill_rect(764, 224, 1, 334, BORDER)
-        game.text(790, 551, '제작 목록', 18)
+        game.text(790, 551, '보유 목록', 18)
         game.text(1059, 551, '보유', 15, GOLD)
         for index, item in enumerate(EQUIPMENT):
             left, bottom, right, top = recipe_bounds(index)
@@ -196,7 +196,8 @@ class WorkbenchPanel:
             draw_item_icon(game, item.image, left + 28, bottom + 23, 40, 40)
             game.text(left + 59, bottom + 23, item.name, 18, GOLD if selected else CREAM)
             fill_rect(1052, bottom + 8, 64, 30, INK)
-            game.text(1061, bottom + 23, str(state.equipment[item.image]), 22, GOLD)
+            owned = state.equipment[item.image] + len(state.storage_units[item.image])
+            game.text(1061, bottom + 23, str(owned), 22, GOLD)
 
         # Only the selected recipe's materials are offered in the bottom strip.
         fill_rect(152, 195, 976, 1, BORDER)
