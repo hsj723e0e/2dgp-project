@@ -16,6 +16,8 @@ from enhancement_panel import EnhancementPanel
 from session_results import SessionResults
 from game_state import GameState, RECIPES
 from player import Player
+from exploration import Expedition, PLANETS, SURFACE_ROOM
+from exploration_panel import FlightPanel, SurfaceView, NAV_BUTTON, contains
 from ui import CATEGORY_ICON_ASSETS, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, load_grayscale_image
 from workshop import (
     EQUIPMENT, HEIGHT, OBSTACLES, ORDER_SIGN_POSITION, ORDER_SIGN_SIZE,
@@ -55,6 +57,15 @@ class Game:
         sdl2.SDL_SetRenderDrawBlendMode(p2.renderer, sdl2.SDL_BLENDMODE_BLEND)
         self.background = p2.load_image(str(ASSETS / "bg_workshop_room.png"))
         self.order_sign = p2.load_image(str(ASSETS / "order_sign.png"))
+        self.exploration_images = {planet.image: p2.load_image(str(ASSETS / f"bg_planet_{planet.image}.png"))
+                                   for planet in PLANETS}
+        self.exploration_images.update({name: p2.load_image(str(ASSETS / f"explore_{name}.png"))
+                                        for name in ("ship", "deposit", "alien")})
+        self.drill_sound = p2.load_wav(str(ASSETS / "explore_drill.wav")) if p2.audio_on else None
+        if self.drill_sound:
+            self.drill_sound.set_volume(24)
+        self.next_drill_sound = 0.0
+        self.explorer_sheet = p2.load_image(str(ASSETS / "player_exploration.png"))
         self.player_sheet = p2.load_image(str(ASSETS / "player_walk.png"))
         self.panel_image = p2.load_image(str(ASSETS / "ui_order_panel.png"))
         self.button = p2.load_image(str(ASSETS / "ui_button.png"))
@@ -86,6 +97,10 @@ class Game:
         self.customer_board = CustomerBoard(self)
         self.enhancement_panel = EnhancementPanel(self)
         self.result_screen = SessionResults(self)
+        self.expedition = Expedition(self.state)
+        self.flight_panel = FlightPanel(self)
+        self.surface_view = SurfaceView(self)
+        self.navigation_open = False
 
     def text(self, x, y, text, size=18, color=CREAM):
         self.fonts[size].draw(x, y, text, color)
@@ -102,6 +117,9 @@ class Game:
         self.workbench_panel.reset()
         self.customer_board.reset()
         self.enhancement_panel.reset()
+        self.expedition = Expedition(self.state)
+        self.next_drill_sound = 0.0
+        self.navigation_open = False
         self.running = True
 
     def close_panel(self):
@@ -145,6 +163,10 @@ class Game:
                 self.running = False
             elif self.state.result is not None:
                 self.result_screen.handle_event(event)
+            elif self.expedition.outside:
+                self.surface_view.handle_event(event)
+            elif self.navigation_open:
+                self.flight_panel.handle_event(event)
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key == sdl2.SDLK_F10:
                     self.feedback_success, self.feedback = self.state.apply_cheat()
@@ -177,6 +199,11 @@ class Game:
                 self.handle_click(*self.mouse, button=event.button, shift=shift)
 
     def handle_click(self, x, y, button=sdl2.SDL_BUTTON_LEFT, shift=False):
+        if (not self.active_station and not self.inventory_open
+                and button == sdl2.SDL_BUTTON_LEFT and contains(NAV_BUTTON, x, y)):
+            self.navigation_open = True
+            self.player.moving = False
+            return
         if self.inventory_open:
             if button == sdl2.SDL_BUTTON_LEFT:
                 self.inventory_panel.handle_click(x, y)
@@ -240,8 +267,31 @@ class Game:
         if previous_order is None and self.state.current_order is not None:
             if self.active_station and self.active_station.name == "주문 게시판":
                 self.feedback = ""
-        if self.active_station or self.inventory_open:
+        self.expedition.update_flight()
+        if self.expedition.outside:
+            dx, dy, keys = self.movement_input()
+            focused = bool(sdl2.SDL_GetKeyboardFocus())
+            if self.inventory_open:
+                dx = dy = 0
+            self.player.update(dx, dy, dt, SURFACE_ROOM, self.expedition.obstacles)
+            mining = (focused and not self.inventory_open and not (dx or dy)
+                      and bool(keys[sdl2.SDL_SCANCODE_E]) and not self.expedition.near_ship(self.player))
+            self.expedition.update_surface(self.player, dt, mining)
+            if (self.drill_sound and self.expedition.mining_node is not None
+                    and self.expedition.surface_time >= self.next_drill_sound):
+                self.drill_sound.play()
+                self.next_drill_sound = self.expedition.surface_time + 0.22
+            if not mining:
+                self.next_drill_sound = 0.0
+            if not self.expedition.outside:
+                self.inventory_open = False
             return
+        if self.active_station or self.inventory_open or self.navigation_open:
+            return
+        dx, dy, _ = self.movement_input()
+        self.player.update(dx, dy, dt, WALKABLE_ROOM, OBSTACLES)
+
+    def movement_input(self):
         keys = sdl2.SDL_GetKeyboardState(None)
         dx = dy = 0
         if sdl2.SDL_GetKeyboardFocus():
@@ -249,7 +299,7 @@ class Game:
             dx -= int(bool(keys[sdl2.SDL_SCANCODE_A] or keys[sdl2.SDL_SCANCODE_LEFT]))
             dy = int(bool(keys[sdl2.SDL_SCANCODE_W] or keys[sdl2.SDL_SCANCODE_UP]))
             dy -= int(bool(keys[sdl2.SDL_SCANCODE_S] or keys[sdl2.SDL_SCANCODE_DOWN]))
-        self.player.update(dx, dy, dt, WALKABLE_ROOM, OBSTACLES)
+        return dx, dy, keys
 
     def draw_shadow(self):
         for offset in range(-4, 5):
@@ -336,6 +386,9 @@ class Game:
 
     def draw(self):
         p2.clear_canvas()
+        if self.expedition.outside and self.state.result is None:
+            self.surface_view.draw()
+            return
         self.background.draw(WIDTH / 2, HEIGHT / 2)
         if self.state.result is not None:
             self.result_screen.draw()
@@ -396,6 +449,12 @@ class Game:
             completed = len(self.state.rentals) - active
             fill_rect(1044, 628, 218, 29, INK, 240)
             self.text(1055, 643, f"대여 {active}건 · 결과 {completed}건", 15, GOLD)
+        if self.navigation_open:
+            self.flight_panel.draw()
+        else:
+            if not self.active_station and not self.inventory_open:
+                self.draw_button(NAV_BUTTON, "행성 항로 / 우주선 출입")
+            self.surface_view.draw_notice()
 
 
 def main():

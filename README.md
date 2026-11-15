@@ -286,3 +286,116 @@ Use case: stylized-concept. Production-ready equipment inventory sprite for a pi
 oxygen
 Use case: stylized-concept. Production-ready equipment inventory sprite for a pixel-art space workshop game. The supplied image is a style and same-category reference only. Create ONE new higher-grade item. Subject: A high-efficiency oxygen regenerator backpack, front three-quarter view, two compact violet and silver cylinders, central filtration cartridge, dark flexible hose connecting the valves, small cyan indicator lights. Readable breathing equipment silhouette. Match the reference chunky pixel-art outlines, limited palette, stepped highlights, item scale and perspective. Entire item centered, fill 85 percent of square canvas, all parts inside the frame. Transparent background. No floor, no shadow, no text, no category badge, no border, no yellow legendary styling. Crisp silhouette readable at 48 pixels.
 ```
+
+
+## 행성 탐사
+
+공방 화면 오른쪽 위의 **행성 항로 / 우주선 출입** 버튼으로 탐사 준비 화면을 엽니다.
+목적지를 선택한 뒤 가방에서 드릴·우주복·산소 장치를 하나씩 직접 선택합니다.
+기본·중급·고급·개인 최상급 장비 모두 사용할 수 있습니다.
+장비가 가방에 있어야 출발하며, 보관함의 장비는 먼저 꺼냅니다.
+비행 시작을 누르면 행성별 이동 시간이 흐르고 도착 알림이 표시됩니다.
+도착한 뒤 **우주선 밖으로**를 누르면 해당 행성의 채집 지대로 나갑니다.
+공방 시설은 비행 중에도 이용할 수 있습니다. 탐사에 나가기 전 선택 장비를 다시 확인합니다.
+
+| 목적지 | 채집 자원 | 비행 |
+| --- | --- | --- |
+| 수성 | 재활용 부품·전자회로 | 4초 |
+| 금성 | 재활용 부품·전자회로 | 5초 |
+| 지구 | 전자회로 | 3초 |
+| 화성 | 재활용 부품·전자회로 | 5초 |
+| 목성 | 고급 복합소재·재활용 부품 | 7초 |
+| 토성 | 고급 복합소재·재활용 부품 | 8초 |
+| 천왕성 | 정밀제어칩·고급 복합소재 | 9초 |
+| 해왕성 | 정밀제어칩·고급 복합소재 | 10초 |
+| 태양 | 고출력 코어 | 12초 |
+
+목성·토성·천왕성·해왕성·태양은 걸어서 탐사할 수 있는 SF 채굴 지대로 표현합니다.
+각 목적지마다 별도의 1280×720 픽셀아트 배경을 사용합니다.
+
+### 탐사 조작
+
+| 입력 | 동작 |
+| --- | --- |
+| WASD / 방향키 | 이동 |
+| E 길게 누르기 | 가까운 광맥 채집, 이동하면 중단 |
+| Space / 좌클릭 | 드릴 근접 공격 |
+| I / 인벤토리 버튼 | 가방 열기·닫기 |
+| 착륙선 입구에서 E / Enter | 우주선으로 귀환 |
+| Esc | 가방 닫기, 귀환 안내 |
+
+채집 자원은 기존 가방에 바로 합쳐집니다. 같은 자원 묶음은 수량을 합치며 새 종류에는 빈칸이 필요합니다.
+빈칸이 없으면 해당 광맥 채집을 중단합니다. 귀환 후 보관·제작·강화에 사용할 수 있습니다.
+가방을 열어도 산소와 위험 요소의 시간은 흐릅니다.
+체력이 0이 되면 공방으로 구조되고 이번 탐사 채집물을 잃습니다.
+출발 전 보유 자원과 장비는 보존합니다. 정상 귀환 시 채집물이 유지됩니다.
+우주선에서 다시 하선하면 체력·산소가 충전되고 새 광맥을 탐사합니다.
+기존 20분 운영 시간은 비행·탐사 중에도 계속 흐릅니다.
+
+### 장비 성능과 위험 요소
+
+장비 등급 값은 초급 1, 중급 2, 고급 3, 개인 최상급 4입니다.
+채집 속도 배율은 `1 + (드릴 등급 - 1) × 0.55 + 강화 단계 × 0.04`입니다.
+광맥은 기본 1.6초마다 자원 1개를 지급하고, 채집 속도 배율에 따라 빨라집니다.
+우주복의 피해 배율은 `1 / (1 + (등급 - 1) × 0.25 + 강화 단계 × 0.035)`입니다.
+산소 최대량은 `90 + 산소 장치 등급 × 35 + 강화 단계 × 4`입니다.
+행성 위험도는 지구 0, 수성·화성 1, 금성 2, 목성·토성 3, 천왕성·해왕성 4, 태양 5입니다.
+산소는 초당 `1 + 위험도 × 0.16`씩 감소합니다.
+
+- 외계 생물은 650픽셀 안의 채집 소리에 반응해 8초 동안 추적합니다. 접근하면 공격하며 드릴로 처치할 수 있습니다.
+- 가스 분출 지점은 11초 주기이며 분출 전 2초간 노란 전조를 표시합니다. 분출은 1.5초 지속되고 원 밖으로 피할 수 있습니다.
+- 불안정 광맥은 노란 원으로 구분합니다. 누적 채집 2초 후 균열 경고가 뜨고 1.5초 뒤 폭발합니다. 폭발 반경은 115픽셀입니다.
+- 산소가 0이면 초당 체력 9를 잃습니다. 체력이 남아 있을 때 착륙선으로 돌아가 귀환할 수 있습니다.
+
+### 탐사 에셋 생성 기록
+
+내장 ImageGen으로 참고 화면의 픽셀아트 시점·색감에 맞춰 생성했습니다.
+9개 배경은 `asset/bg_planet_*.png`, 투명 소품은 `asset/explore_ship.png`,
+`asset/explore_deposit.png`, `asset/explore_alien.png`입니다.
+우주복 4방향 이동 시트는 `asset/player_exploration.png`이며 256×384, 64×96 셀 16개입니다.
+드릴 효과음 `asset/explore_drill.wav`는 코드로 합성한 0.2초 기계음입니다.
+
+생성 프롬프트는 다음과 같습니다.
+
+```text
+asset/bg_planet_mercury.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Mercury, charcoal grey cratered rock, harsh white sunlight, scorched cliffs, sparse amber glints. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_venus.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Venus, yellow ochre volcanic rock and sulphur haze, ochre cliffs, distant orange glowing fissures restricted to edges. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_earth.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Earth, abandoned blue-green industrial scrapyard on rocky ground, tiny circuit fragments, sparse moss and broken machinery confined to map edges. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_mars.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Mars, rust-red rocky desert, red sandstone cliffs, fine dust, distant dark basalt debris. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_jupiter.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Jupiter fictional science-fiction solid mining island above swirling cream and orange gas clouds, brown layered rock terrain, gas clouds around edges. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_saturn.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Saturn fictional science-fiction solid mining island above pale golden gas clouds, warm beige stone ground, ring fragments and gas clouds visible beyond outer edges. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_uranus.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Uranus fictional solid frozen mining island, turquoise ice and pale cyan rock, dark teal crevices confined to edges, cold stars beyond cliffs. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_neptune.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Neptune fictional solid frozen mining island, deep cobalt and indigo rock, blue ice, edge cliffs above dark storm clouds. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/bg_planet_sun.png
+Use case: stylized-concept. Asset type: playable 1280x720 wide pixel-art space mining game background. The supplied screenshot is only a perspective and pixel-art style reference. Theme: Sun fictional shielded dark basalt mining island above solar plasma, black-red rock terrain, fiery golden plasma beyond outer cliffs, orange light around edges. Three-quarter top-down view with NO horizon. One broad rectangular traversable mining plateau filling the canvas. The central 85 percent is flat continuous ground with subtle small cracks, pebbles and surface texture ONLY, spacious enough for player and runtime resource sprites. Jagged low cliff edges and decorative rocks stay inside outermost 6 percent of image. Keep the landing area at left-center and all paths across center empty. Crisp chunky pixel art, dark navy outlines, clear navigable ground. No spaceship, no people, no creatures, no large crystal nodes, no interface, no minimap, no text, no labels, no icons, no foreground obstacles in playable center. 16:9 landscape.
+
+asset/explore_ship.png
+Use case: stylized-concept. Create a single standalone transparent PNG game sprite. The reference is a visual style reference for a space mining game. A small landed industrial spaceship with silver armored hull, amber cockpit and a warm glowing open front hatch, two landing feet and short ramp extending toward bottom-right. Three-quarter top-down view. One complete standalone spaceship. No ground or shadow. Crisp chunky pixel-art edges, dark outline, sparse highlights, navy shadows, amber/cyan accents matching the reference. Centered square composition, all parts visible, use 85 percent of canvas. No HUD, no words, no letters, no border, no surrounding scene.
+
+asset/explore_deposit.png
+Use case: stylized-concept. Create a single standalone transparent PNG game sprite. The reference is a visual style reference for a space mining game. One compact jagged dark rock outcrop with vivid teal mineral crystals embedded in it, suitable for a mineable resource node in a top-down game. Chunky silhouette and a few bright crystal facets. No floor or shadow. Crisp chunky pixel-art edges, dark outline, sparse highlights, navy shadows, amber/cyan accents matching the reference. Centered square composition, all parts visible, use 85 percent of canvas. No HUD, no words, no letters, no border, no surrounding scene.
+
+asset/explore_alien.png
+Use case: stylized-concept. Create a single standalone transparent PNG game sprite. The reference is a visual style reference for a space mining game. One small hostile alien beetle with magenta-purple armored carapace, four squat legs, glowing orange eyes and small pointed mandibles, facing down-right in three-quarter top-down view. Readable full creature silhouette. No floor or shadow. Crisp chunky pixel-art edges, dark outline, sparse highlights, navy shadows, amber/cyan accents matching the reference. Centered square composition, all parts visible, use 85 percent of canvas. No HUD, no words, no letters, no border, no surrounding scene.
+
+asset/player_exploration.png
+Edit this pixel-art player walk sprite sheet into a space exploration version of the same protagonist. Preserve EXACTLY the 4 columns by 4 rows grid, all 16 frame positions, frame dimensions and direction rows. Top row faces down, second faces left, third faces right, fourth faces up. Within each row frame 1 standing, frames 2-4 walking. Replace work clothes with a compact pale silver spacesuit, dark navy joints, amber helmet rim, clear blue visor revealing the same brown-haired face and goggles in front frames, small oxygen backpack on back frames. Keep exact body size, foot baseline, pose silhouettes, pixel scale and transparent margins of each original cell. No rearranging, no overlapping adjacent cells, no text, no borders. Genuine transparent background, sheet aspect ratio 2:3. Each cell logically 64x96, full sheet 256x384. Crisp pixel art matching the original.
+Transparency cleanup
+Remove the entire grey-brown gradient background from this sprite sheet, making all space outside the 16 astronaut silhouettes genuinely transparent. Preserve every astronaut pixel, all exact positions, the 4 by 4 grid, the full canvas framing, aspect ratio, colors, poses and cell baselines. Do not redraw, scale or move characters. No shadows or glows outside the figures. Deliver a transparent PNG sprite sheet.
+```
