@@ -4,7 +4,7 @@ from collections import Counter
 
 import sdl2
 
-from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS, REWARD_NAMES
+from orders import CUSTOMER_NAMES, INFORMATION_PRICE, RENTAL_DURATIONS
 from inventory_panel import draw_grid, slot_bounds
 from ui import draw_item_icon, CYAN, GOLD, INK, MUTED, RED, fill_rect, quantity_badge
 from workshop import EQUIPMENT, HEIGHT, WIDTH
@@ -261,13 +261,12 @@ class CustomerBoard:
                 fill_rect(752, 228, 116, 88, (20, 40, 56))
                 fill_rect(880, 228, 128, 88, (20, 40, 56))
                 game.text(762, 301, "판매", 22, GOLD)
-                game.text(762, 253, str(value), 26, GOLD)
-                game.text(825, 253, "코인", 18, MUTED)
+                draw_item_icon(game, "coins", 782, 258, 36, 36)
+                game.text(808, 258, str(value), 26, GOLD)
                 reward, amount = state.rental_reward(order)
                 game.text(890, 301, "대여", 22, CYAN)
-                game.text(890, 266, REWARD_NAMES[reward], 15, MUTED)
-                game.text(890, 242, str(amount), 22, CYAN)
-                game.text(946, 242, "코인" if reward == "coins" else "개", 15, MUTED)
+                draw_item_icon(game, reward, 910, 258, 36, 36)
+                game.text(938, 258, str(amount), 26, CYAN)
                 game.draw_button(SELL, "1 판매하기", available)
                 game.draw_button(RENT, "2 대여하기", available)
             if reason and not game.feedback:
@@ -315,8 +314,8 @@ class CustomerBoard:
         if contract.status == "lost":
             game.text(758, 279, "보상 없음", 18, RED)
         else:
-            game.text(758, 279, REWARD_NAMES[contract.reward_item], 18, MUTED)
-            quantity_badge(game, 940, 263, contract.reward_amount, color=CYAN, width=64)
+            draw_item_icon(game, contract.reward_item, 774, 279, 28, 28)
+            game.text(802, 279, str(contract.reward_amount), 22, CYAN)
         for index, (equipment, quantity) in enumerate(contract.order.requirements):
             y = 237 - index * 34
             game.text(758, y + 16, EQUIPMENT_NAMES[equipment], 15)

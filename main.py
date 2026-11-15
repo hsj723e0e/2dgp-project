@@ -58,6 +58,7 @@ class Game:
         self.button_disabled = p2.load_image(str(ASSETS / "ui_button_disabled.png"))
         image_names = {entry.image for station in STATIONS for entry in station.entries}
         self.icons = {name: p2.load_image(str(ASSETS / f"{name}.png")) for name in image_names}
+        self.icons["coins"] = p2.load_image(str(ASSETS / "ui_coin.png"))
         self.category_icons = {category: p2.load_image(str(ASSETS / filename))
                                for category, filename in CATEGORY_ICON_ASSETS.items()}
         self.grayscale_icons = {name: load_grayscale_image(ASSETS / f"{name}.png")
@@ -296,11 +297,8 @@ class Game:
 
     def draw_coin_counter(self):
         fill_rect(1044, 665, 218, 39, INK, 240)
-        for offset in range(-9, 10):
-            half_width = int((100 - offset * offset) ** 0.5)
-            fill_rect(1068 - half_width, 685 + offset, 2 * half_width, 1, GOLD)
-        fill_rect(1066, 680, 3, 10, (156, 100, 41))
-        self.text(1091, 686, f"{self.state.coins} 코인", 22, GOLD)
+        self.icons["coins"].draw(1068, 685, 28, 28)
+        self.text(1091, 686, str(self.state.coins), 22, GOLD)
 
     def draw_session_timer(self):
         remaining = ceil(self.state.session_remaining)
