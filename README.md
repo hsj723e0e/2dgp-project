@@ -240,3 +240,23 @@ circuit subject = A bright green microchip with a solid square centre and four s
 ```text
 Use case: stylized-concept. Asset type: currency icon for a pixel-art space workshop crafting game. Draw ONE gold coin, shown almost front-facing with a slight three-quarter thickness. Bold circular silhouette, warm golden face, bright yellow top-left rim highlight, darker amber stepped rim and a few simple pixel reflections. A single recessed four-point star engraved in the centre suggests space exploration. Crisp chunky pixel-art edges, limited gold palette, strong contrast and simple readable shapes suitable for display at 24x24 or 32x32 pixels. Coin centred and occupying 85 percent of the square canvas. No letters, no numerals, no text, no extra coins, no floating sparkles, no drop shadow, no frame or badge. Genuine transparent background. Production-ready standalone game currency sprite.
 ```
+
+
+### 중앙 주문 표지판
+
+주문 게시판은 중앙 바닥의 독립형 표지판입니다. 가까이에서 E 또는 Enter로 이용합니다.
+받침대만 이동을 막으며, 캐릭터와 표지판의 앞뒤 위치에 따라 그리는 순서를 바꿉니다.
+위치와 크기는 `workshop.py`의 `ORDER_SIGN_POSITION`, `ORDER_SIGN_SIZE`에서 조정합니다.
+
+내장 ImageGen으로 기존 공방 배경을 참조해 생성했습니다.
+`asset/bg_workshop_room.png`는 벽 게시판을 제거한 1280×720 배경이며,
+`asset/order_sign.png`는 투명 배경의 160×160 표지판입니다.
+생성 프롬프트는 다음과 같습니다.
+
+```text
+Background edit prompt
+Precisely edit the supplied 1280x720 pixel-art space workshop background. Remove ONLY the large dark rectangular noticeboard with cyan side lights in the upper central wall, between the left workbench and right equipment rack. Replace that noticeboard and its frame with matching ordinary dark navy metal wall panels, seams, bolts and the existing warm overhead light. Preserve the room geometry, perspective, floor grid, furniture, shelves, spacecraft window, plants, all other objects, lighting and pixel-art style exactly. The floor remains entirely empty. Do not add a new board or sign anywhere. Keep the original full composition and 16:9 framing, ideally the same 1280x720 dimensions. This is a background cleanup so a separate freestanding sign sprite can be placed on the central floor at runtime.
+
+Sign sprite prompt
+Generate a single standalone freestanding order notice sign sprite for the supplied pixel-art space workshop. The supplied room image is a style and perspective reference only. Draw ONLY a small industrial metal noticeboard supported by one sturdy central metal post and a wide stable low base with two short feet. Three-quarter front view matching the room furniture, with the top edge slightly visible. Rectangular board with warm brass metal edging, dark navy display face, a few small pinned cream order cards and tiny teal status lights. No words, letters, numerals, readable text or symbols that resemble writing. The full board, post and feet must be visible. Chunky crisp pixel art, warm amber and cyan lighting, suitable for a 144x144 pixel world prop. Transparent background, no surrounding room, no floor tile, no separate shadow. Square composition, the sign occupies almost the entire height and the feet sit close to the bottom edge with a small transparent margin. One asset only.
+```

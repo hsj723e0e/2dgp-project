@@ -8,12 +8,15 @@ from player import Rect
 
 WIDTH, HEIGHT = 1280, 720
 WALKABLE_ROOM = Rect(58, 65, 1220, 400)
+ORDER_SIGN_POSITION = (640, 260)
+ORDER_SIGN_SIZE = (144, 144)
+ORDER_SIGN_BASE = Rect(604, 250, 676, 275)
 
 
 OBSTACLES = (
     Rect(128, 382, 465, 570),
     Rect(45, 130, 208, 420),
-    Rect(530, 420, 750, 605),
+    ORDER_SIGN_BASE,
     Rect(855, 382, 1160, 570),
     Rect(1060, 140, 1228, 420),
     Rect(0, 0, 110, 100),
@@ -78,7 +81,7 @@ STATIONS = (
             "필요 재료를 조합 슬롯에 넣고 제작하세요. 완성품은 자동 회수됩니다.", EQUIPMENT),
     Station("재료 보관대", 255, 230,
             "재료와 보상을 종류별 한 칸에 합쳐 보관하세요.", RESOURCE_ITEMS),
-    Station("주문 게시판", 640, 360,
+    Station("주문 게시판", ORDER_SIGN_POSITION[0], ORDER_SIGN_POSITION[1] - 30,
             "공방을 찾는 손님과 대여 보상을 확인하세요.", CUSTOMERS),
     Station("장비 진열대", 990, 345,
             "장비 종류별 보관함과 캐릭터 가방 사이에서 장비를 옮기세요.", EQUIPMENT),

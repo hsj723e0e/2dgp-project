@@ -17,7 +17,10 @@ from session_results import SessionResults
 from game_state import GameState, RECIPES
 from player import Player
 from ui import CATEGORY_ICON_ASSETS, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect, load_grayscale_image
-from workshop import EQUIPMENT, HEIGHT, OBSTACLES, STATIONS, WALKABLE_ROOM, WIDTH, nearest_station
+from workshop import (
+    EQUIPMENT, HEIGHT, OBSTACLES, ORDER_SIGN_POSITION, ORDER_SIGN_SIZE,
+    STATIONS, WALKABLE_ROOM, WIDTH, nearest_station,
+)
 
 
 ASSETS = Path(__file__).resolve().parent / "asset"
@@ -51,6 +54,7 @@ class Game:
         sdl2.SDL_SetHint(b"SDL_RENDER_SCALE_QUALITY", b"0")
         sdl2.SDL_SetRenderDrawBlendMode(p2.renderer, sdl2.SDL_BLENDMODE_BLEND)
         self.background = p2.load_image(str(ASSETS / "bg_workshop_room.png"))
+        self.order_sign = p2.load_image(str(ASSETS / "order_sign.png"))
         self.player_sheet = p2.load_image(str(ASSETS / "player_walk.png"))
         self.panel_image = p2.load_image(str(ASSETS / "ui_order_panel.png"))
         self.button = p2.load_image(str(ASSETS / "ui_button.png"))
@@ -257,7 +261,10 @@ class Game:
         for station in STATIONS:
             selected = station is nearby
             width = len(station.name) * 18 + 28
-            x, y = station.x - width / 2, station.y + 26
+            label_y = station.y + 26
+            if station.name == "주문 게시판":
+                label_y = ORDER_SIGN_POSITION[1] + ORDER_SIGN_SIZE[1] + 4
+            x, y = station.x - width / 2, label_y
             fill_rect(x - 1, y - 1, width + 2, 28, CYAN if selected else (68, 87, 97), 220)
             fill_rect(x, y, width, 26, INK, 235)
             self.text(x + 14, y + 14, station.name, color=CYAN if selected else CREAM)
@@ -333,9 +340,16 @@ class Game:
         if self.state.result is not None:
             self.result_screen.draw()
             return
-        self.draw_station_labels()
         self.draw_shadow()
-        self.player.draw(self.player_sheet)
+        sign_x, sign_y = ORDER_SIGN_POSITION
+        sign_width, sign_height = ORDER_SIGN_SIZE
+        if self.player.y > sign_y:
+            self.player.draw(self.player_sheet)
+            self.order_sign.draw(sign_x, sign_y + sign_height / 2 - 6, sign_width, sign_height)
+        else:
+            self.order_sign.draw(sign_x, sign_y + sign_height / 2 - 6, sign_width, sign_height)
+            self.player.draw(self.player_sheet)
+        self.draw_station_labels()
         fill_rect(18, 665, 282, 39, INK, 225)
         self.text(34, 686, "나만의 우주공방", 22)
         fill_rect(0, 0, WIDTH, 44, INK, 235)
