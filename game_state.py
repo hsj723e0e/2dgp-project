@@ -260,6 +260,15 @@ class GameState:
     def resource_inventory(self, image):
         return self.materials if image in self.materials else self.rewards
 
+    def receive_resource(self, image, quantity):
+        if self.session_over or image not in self.resource_storage or type(quantity) is not int or quantity < 1:
+            return False
+        inventory = self.resource_inventory(image)
+        if inventory[image] == 0 and image not in self.staged_materials and self.inventory_free == 0:
+            return False
+        inventory[image] += quantity
+        return True
+
     def store_resource(self, image, quantity=None):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
