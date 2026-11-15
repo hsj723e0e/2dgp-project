@@ -31,8 +31,8 @@ def slot_bounds(origin, index, columns):
 
 
 def storage_recipe_bounds(index):
-    top = 510 - index * 52
-    return (116, top - 46, 366, top)
+    top = 530 - index * 44
+    return (116, top - 40, 366, top)
 
 
 def draw_grid(game, origin, items, columns, rows, selected_unit_id=None,
@@ -152,10 +152,10 @@ class StoragePanel:
             fill_rect(left, bottom, right - left, top - bottom, (36, 61, 70) if selected else SURFACE)
             if selected:
                 fill_rect(left, bottom, 3, top - bottom, CYAN)
-            draw_item_icon(game, equipment.image, left + 27, bottom + 23, 40, 40)
-            game.text(left + 53, bottom + 23, equipment.name, 18, CYAN if selected else CREAM)
-            fill_rect(right - 43, bottom + 8, 38, 30, INK)
-            game.text(right - 37, bottom + 23, str(len(state.storage_units[equipment.image])), 22, GOLD)
+            draw_item_icon(game, equipment.image, left + 24, bottom + 20, 34, 34)
+            game.text(left + 47, bottom + 20, equipment.name, 18, CYAN if selected else CREAM)
+            fill_rect(right - 43, bottom + 5, 38, 30, INK)
+            game.text(right - 37, bottom + 20, str(len(state.storage_units[equipment.image])), 22, GOLD)
         game.text(394, 530, entry.name + ' 보관함', 22)
         game.text(730, 530, f'{len(chest)} / 28', 18, GOLD)
         game.text(878, 530, '가방', 22)

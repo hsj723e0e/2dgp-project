@@ -21,11 +21,13 @@ TIER_COLORS = {
     1: (245, 245, 245),
     2: (174, 230, 93),
     3: (80, 157, 255),
-    4: (255, 215, 80),
+    4: (190, 120, 255),
+    5: (255, 215, 80),
 }
 GEAR_IMAGES = tuple(entry.image for entry in (*EQUIPMENT, *PERSONAL_EQUIPMENT[:3]))
 ITEM_TIERS = {entry.image: 1 for entry in MATERIALS}
-ITEM_TIERS.update({image: int(image[-2:]) + 1 for image in GEAR_IMAGES})
+ITEM_TIERS.update({entry.image: 2 + index // 3 for index, entry in enumerate(EQUIPMENT)})
+ITEM_TIERS.update({entry.image: 5 for entry in PERSONAL_EQUIPMENT[:3]})
 ITEM_CATEGORIES = {image: image.split('_')[1] for image in GEAR_IMAGES}
 ITEM_CATEGORIES.update({entry.image: 'parts' for entry in MATERIALS})
 CATEGORY_ICON_ASSETS = {category: f'ui_category_{category}.png'

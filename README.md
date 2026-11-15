@@ -32,7 +32,7 @@ Windows의 맑은 고딕을 자동으로 사용합니다. 다른 환경에서는
 | Shift + 클릭 | 클릭한 종류의 아이템 전체 이동 |
 | Esc | 시설 화면 닫기, 공방 화면에서 종료 |
 
-작업대에서 초급·중급 장비를 제작하고 재료 보관대에서 재료와 보상을 보관합니다.
+작업대에서 초급·중급·고급 장비를 제작하고 재료 보관대에서 재료와 보상을 보관합니다.
 주문 게시판에서는 판매·대여·거절을 선택하고 진열대에서는 종류별 보관함에 장비를 보관하거나 가방으로 꺼냅니다.
 강화 장치에서는 개별 기본 장비 강화, 개인 장비 제작·강화, 성장 재료 확인을 이용할 수 있습니다.
 보유·요구 수량 비교에서 충족한 보유량은 청록색, 요구량은 금색, 부족한 보유량은 붉은색으로 강조됩니다.
@@ -48,7 +48,7 @@ E / Enter / Esc 또는 닫기 버튼으로 닫습니다. 시설 근처에서는 
 재료와 코어·칩·미확인 상자는 같은 종류끼리 수량 제한 없이 한 칸에 겹쳐 보관합니다.
 개인 최상급 장비도 각각 가방 한 칸을 사용합니다. 코인은 칸을 사용하지 않습니다.
 
-장비 진열대 왼쪽에서 6종 장비 중 하나를 선택하면 전용 7×4, 총 28칸 보관함이 열립니다.
+장비 진열대 왼쪽에서 9종 장비 중 하나를 선택하면 전용 7×4, 총 28칸 보관함이 열립니다.
 보관함과 함께 가방을 표시하며 좌클릭은 1개, 우클릭은 최대 10개, Shift+클릭은
 클릭한 종류의 장비 전체를 반대편으로 옮깁니다. 목적지의 빈칸만큼 이동하며 강화 단계를 유지합니다.
 선택한 종류의 장비만 해당 보관함에 넣을 수 있습니다. 이동 시 고유 번호와 강화 단계를 유지합니다.
@@ -76,9 +76,12 @@ Shift+클릭은 묶음 전체를 옮깁니다.
 | 합금 드릴 | 고급 복합소재 2개 | 1개 | 14초 |
 | 강화 우주복 | 고급 복합소재 3개 | 2개 | 16초 |
 | 순환형 산소통 | 고급 복합소재 2개 | 2개 | 14초 |
+| 초경합금 드릴 | 고급 복합소재 4개 + 정밀제어칩 1개 | 3개 | 20초 |
+| 고내압 탐사복 | 고급 복합소재 6개 + 정밀제어칩 1개 | 4개 | 24초 |
+| 고효율 산소 재생기 | 고급 복합소재 4개 + 정밀제어칩 1개 | 4개 | 22초 |
 
 작업대 오른쪽 보유 목록에서 장비를 선택합니다. 보유 수량은 캐릭터 가방과 해당 장비 보관함의 수량을 합산합니다.
-아래에는 선택 장비의 필요 재료만 표시됩니다. 재료를 클릭하거나 1 / 2를 누르면
+아래에는 선택 장비의 필요 재료만 표시됩니다. 재료를 클릭하거나 1 / 2 / 3을 누르면
 해당 재료의 필요 수량 전체가 조합 슬롯에 들어가며 보유 수량이 즉시 줄어듭니다.
 충족한 슬롯은 밝은 청록색 테두리로 강조합니다. 슬롯을 클릭해 해제하거나
 장비 선택을 바꾸거나 화면을 닫으면 제작 전 투입한 재료가 반환됩니다.
@@ -93,7 +96,7 @@ Shift+클릭은 묶음 전체를 옮깁니다.
 강화 장치의 기본 장비 강화 분류에서 3×3 가방에 있는 장비 한 개를 클릭해 선택합니다.
 선택한 장비는 금색 테두리로 강조하며, 오른쪽에 현재·다음 강화 단계와 숫자를 강조한 비용을 표시합니다.
 코인으로 강화 버튼 또는 Space를 누르면 선택한 장비의 강화 단계가 올라갑니다.
-초급 강화 비용은 `8 × 다음 강화 단계`, 중급은 `12 × 다음 강화 단계` 코인입니다.
+강화 비용은 다음 강화 단계에 초급 8, 중급 12, 고급 18을 곱한 코인입니다.
 기본 장비는 +13까지 강화할 수 있으며, 강화 단계당 대여 성공률이 1%p 증가합니다.
 여러 장비를 함께 대여하면 선택한 장비들의 평균 강화 단계로 성공률을 계산하고 최대 98%를 적용합니다.
 
@@ -114,9 +117,9 @@ Shift+클릭은 묶음 전체를 옮깁니다.
 | 손님 | 요청 |
 | --- | --- |
 | 초보 작업자 | 초급 3종에서 총 1~2개, 중복 가능 |
-| 전문 탐사원 | 중급 3종에서 총 1~2개, 중복 가능 |
-| 우주 관광객 | 초급·중급 6종에서 총 4개, 중복 가능 |
-| 수상한 손님 | 초급·중급 6종 중 서로 다른 4종을 각 1개 |
+| 전문 탐사원 | 중급·고급 6종에서 총 1~2개, 중복 가능 |
+| 우주 관광객 | 초급·중급·고급 9종에서 총 4개, 중복 가능 |
+| 수상한 손님 | 초급·중급·고급 9종 중 서로 다른 4종을 각 1개 |
 | 정보상 | 코인으로 다음 시장 사건 정보 구매 |
 
 게시판은 요청 장비를 `보급형 우주복 × 2`처럼 표시하고, 아래에 보유 아이템의 사진과 수량을 표시합니다.
@@ -134,7 +137,7 @@ Space 또는 선택 확정 버튼으로 판매합니다. `2` 대여를 선택하
 강화 우주복 70, 순환형 산소통 52코인입니다. 60초마다 시장 사건이 순환하며 영향을 받는
 장비 판매가는 1.25배로 증가하며 소수 코인은 버립니다.
 사건은 소행성 채굴 구역 개방(드릴), 우주정거장 외벽 점검(우주복·산소 장치),
-화물선 운항 중단(중급 장비) 순서입니다.
+화물선 운항 중단(중급·고급 장비) 순서입니다.
 
 정보상에게는 `1` 또는 정보 구매 버튼으로 15코인을 지불하고 다음 시장 사건을 확인합니다.
 구매한 정보는 게시판 하단에서 다음 시세 갱신까지 확인할 수 있습니다.
@@ -201,7 +204,8 @@ Space 또는 선택 확정 버튼으로 판매합니다. `2` 대여를 선택하
 | 1 | 재활용 부품·고급 복합소재·전자회로 | 흰색 |
 | 2 | 고철 드릴·보급형 우주복·소형 산소통 | 연두색 |
 | 3 | 합금 드릴·강화 우주복·순환형 산소통 | 파란색 |
-| 4 | 플라스마 드릴·첨단 탐사복·자급형 생명유지장치 | 노란색 |
+| 4 | 초경합금 드릴·고내압 탐사복·고효율 산소 재생기 | 보라색 |
+| 5 | 플라스마 드릴·첨단 탐사복·자급형 생명유지장치 | 노란색 |
 
 아이템 우측 상단의 배지로 장비 종류와 기본 재료 3종을 구분합니다.
 주황색 드릴 날·하늘색 헬멧·청록색 O₂ 기호를 남색 바탕과 밝은 테두리에 표시합니다.
@@ -259,4 +263,26 @@ Precisely edit the supplied 1280x720 pixel-art space workshop background. Remove
 
 Sign sprite prompt
 Generate a single standalone freestanding order notice sign sprite for the supplied pixel-art space workshop. The supplied room image is a style and perspective reference only. Draw ONLY a small industrial metal noticeboard supported by one sturdy central metal post and a wide stable low base with two short feet. Three-quarter front view matching the room furniture, with the top edge slightly visible. Rectangular board with warm brass metal edging, dark navy display face, a few small pinned cream order cards and tiny teal status lights. No words, letters, numerals, readable text or symbols that resemble writing. The full board, post and feet must be visible. Chunky crisp pixel art, warm amber and cyan lighting, suitable for a 144x144 pixel world prop. Transparent background, no surrounding room, no floor tile, no separate shadow. Square composition, the sign occupies almost the entire height and the feet sit close to the bottom edge with a small transparent margin. One asset only.
+```
+
+고급 장비의 기본 판매 가격은 초경합금 드릴 94, 고내압 탐사복 138, 고효율 산소 재생기 110코인입니다.
+시세 사건의 종류별 수요 증가에도 고급 장비를 포함합니다.
+
+
+### 고급 장비 에셋 생성 기록
+
+내장 ImageGen으로 같은 종류의 중급 장비를 스타일 참조하여 각각 생성한 뒤,
+128×128 투명 PNG로 정규화했습니다.
+저장 경로는 `asset/eq_drill_advanced.png`, `asset/eq_suit_advanced.png`,
+`asset/eq_oxygen_advanced.png`입니다.
+
+```text
+drill
+Use case: stylized-concept. Production-ready equipment inventory sprite for a pixel-art space workshop game. The supplied image is a style and same-category reference only. Create ONE new higher-grade item. Subject: A heavy-duty tungsten-carbide industrial handheld drill, spiral pointed carbide bit facing left, dark gunmetal body with violet armor panels and small cyan indicators. Sturdy pistol grip. Clearly stronger than the reference alloy drill, using a physical metal bit. Match the reference chunky pixel-art outlines, limited palette, stepped highlights, item scale and perspective. Entire item centered, fill 85 percent of square canvas, all parts inside the frame. Transparent background. No floor, no shadow, no text, no category badge, no border, no yellow legendary styling. Crisp silhouette readable at 48 pixels.
+
+suit
+Use case: stylized-concept. Production-ready equipment inventory sprite for a pixel-art space workshop game. The supplied image is a style and same-category reference only. Create ONE new higher-grade item. Subject: A high-pressure exploration spacesuit shown front-facing, empty display suit with helmet, reinforced violet and charcoal pressure armor, pale grey joint seals and a large dark blue visor. Compact practical industrial protective suit. Match the reference chunky pixel-art outlines, limited palette, stepped highlights, item scale and perspective. Entire item centered, fill 85 percent of square canvas, all parts inside the frame. Transparent background. No floor, no shadow, no text, no category badge, no border, no yellow legendary styling. Crisp silhouette readable at 48 pixels.
+
+oxygen
+Use case: stylized-concept. Production-ready equipment inventory sprite for a pixel-art space workshop game. The supplied image is a style and same-category reference only. Create ONE new higher-grade item. Subject: A high-efficiency oxygen regenerator backpack, front three-quarter view, two compact violet and silver cylinders, central filtration cartridge, dark flexible hose connecting the valves, small cyan indicator lights. Readable breathing equipment silhouette. Match the reference chunky pixel-art outlines, limited palette, stepped highlights, item scale and perspective. Entire item centered, fill 85 percent of square canvas, all parts inside the frame. Transparent background. No floor, no shadow, no text, no category badge, no border, no yellow legendary styling. Crisp silhouette readable at 48 pixels.
 ```

@@ -2,12 +2,12 @@ import random
 import unittest
 
 from game_state import CUSTOMER_INTERVAL, GameState
-from orders import ALL_EQUIPMENT, BASIC_EQUIPMENT, MEDIUM_EQUIPMENT, create_order
+from orders import ALL_EQUIPMENT, BASIC_EQUIPMENT, EXPERT_EQUIPMENT, create_order
 
 
 class OrderGenerationTests(unittest.TestCase):
     def test_novice_and_expert_request_one_or_two_within_their_tier(self):
-        for customer, allowed in (("npc_novice", BASIC_EQUIPMENT), ("npc_expert", MEDIUM_EQUIPMENT)):
+        for customer, allowed in (("npc_novice", BASIC_EQUIPMENT), ("npc_expert", EXPERT_EQUIPMENT)):
             rng = random.Random(17)
             observed_quantities = set()
             for identifier in range(200):

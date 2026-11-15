@@ -7,12 +7,15 @@ from workshop import CUSTOMERS, EQUIPMENT
 
 
 BASIC_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[:3])
-MEDIUM_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[3:])
-ALL_EQUIPMENT = BASIC_EQUIPMENT + MEDIUM_EQUIPMENT
+MEDIUM_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[3:6])
+ADVANCED_EQUIPMENT = tuple(entry.image for entry in EQUIPMENT[6:])
+EXPERT_EQUIPMENT = MEDIUM_EQUIPMENT + ADVANCED_EQUIPMENT
+ALL_EQUIPMENT = BASIC_EQUIPMENT + EXPERT_EQUIPMENT
 CUSTOMER_NAMES = {entry.image: entry.name for entry in CUSTOMERS}
 SALE_PRICES = {
     "eq_drill_01": 32, "eq_suit_01": 50, "eq_oxygen_01": 38,
     "eq_drill_02": 46, "eq_suit_02": 70, "eq_oxygen_02": 52,
+    "eq_drill_advanced": 94, "eq_suit_advanced": 138, "eq_oxygen_advanced": 110,
 }
 INFORMATION_PRICE = 15
 MARKET_INTERVAL = 60
@@ -28,9 +31,9 @@ class MarketEvent:
 
 
 MARKET_EVENTS = (
-    MarketEvent("소행성 채굴 구역 개방", ("eq_drill_01", "eq_drill_02")),
-    MarketEvent("우주정거장 외벽 점검", ("eq_suit_01", "eq_suit_02", "eq_oxygen_01", "eq_oxygen_02")),
-    MarketEvent("화물선 운항 중단", MEDIUM_EQUIPMENT),
+    MarketEvent("소행성 채굴 구역 개방", ("eq_drill_01", "eq_drill_02", "eq_drill_advanced")),
+    MarketEvent("우주정거장 외벽 점검", ("eq_suit_01", "eq_suit_02", "eq_oxygen_01", "eq_oxygen_02", "eq_suit_advanced", "eq_oxygen_advanced")),
+    MarketEvent("화물선 운항 중단", EXPERT_EQUIPMENT),
 )
 
 
@@ -64,7 +67,7 @@ def create_order(identifier, customer, rng):
     if customer == "npc_broker":
         requested = []
     elif customer in ("npc_novice", "npc_expert"):
-        pool = BASIC_EQUIPMENT if customer == "npc_novice" else MEDIUM_EQUIPMENT
+        pool = BASIC_EQUIPMENT if customer == "npc_novice" else EXPERT_EQUIPMENT
         requested = rng.choices(pool, k=rng.randint(1, 2))
     elif customer == "npc_tourist":
         requested = rng.choices(ALL_EQUIPMENT, k=4)

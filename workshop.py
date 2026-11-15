@@ -47,6 +47,9 @@ EQUIPMENT = (
     Entry("합금 드릴", "eq_drill_02", "중급 드릴 · 고급 복합소재 + 전자회로"),
     Entry("강화 우주복", "eq_suit_02", "중급 우주복 · 고급 복합소재 + 전자회로"),
     Entry("순환형 산소통", "eq_oxygen_02", "중급 산소 장치 · 고급 복합소재 + 전자회로"),
+    Entry("초경합금 드릴", "eq_drill_advanced", "고급 드릴 · 복합소재 + 전자회로 + 정밀제어칩"),
+    Entry("고내압 탐사복", "eq_suit_advanced", "고급 우주복 · 복합소재 + 전자회로 + 정밀제어칩"),
+    Entry("고효율 산소 재생기", "eq_oxygen_advanced", "고급 산소 장치 · 복합소재 + 전자회로 + 정밀제어칩"),
 )
 
 MATERIALS = (

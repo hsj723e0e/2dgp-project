@@ -362,7 +362,7 @@ class Game:
             elif self.active_station.name == "재료 보관대":
                 controls = "좌클릭 1개 / 우클릭 10개 / SHIFT+클릭 전체   E / ESC 닫기"
             elif self.active_station.name == "작업대":
-                controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2 투입   SPACE 제작   E / ESC 닫기"
+                controls = "↑ ↓ 장비 선택   재료 클릭 / 1·2·3 투입   SPACE 제작   E / ESC 닫기"
             elif self.active_station.name == "주문 게시판":
                 controls = "1 판매 / 정보   2 대여   3 거절   TAB 대여 현황   E / ESC 닫기"
                 if self.customer_board.unit_action == "rent":

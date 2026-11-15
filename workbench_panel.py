@@ -7,14 +7,14 @@ import sdl2.sdlttf
 
 from game_state import RECIPES
 from ui import draw_item_icon, CREAM, CYAN, GOLD, INK, MUTED, RED, fill_rect
-from workshop import EQUIPMENT, HEIGHT, MATERIALS, WIDTH
+from workshop import EQUIPMENT, HEIGHT, RESOURCE_ITEMS, WIDTH
 
 
 CLOSE_BUTTON = (1068, 585, 1128, 623)
 ACTION_BUTTON = (334, 228, 594, 268)
 SURFACE = (23, 38, 51)
 BORDER = (61, 79, 93)
-MATERIAL_NAMES = {entry.image: entry.name for entry in MATERIALS}
+MATERIAL_NAMES = {entry.image: entry.name for entry in RESOURCE_ITEMS}
 
 
 def contains(bounds, x, y):
@@ -23,8 +23,8 @@ def contains(bounds, x, y):
 
 
 def recipe_bounds(index):
-    top = 531 - index * 52
-    return (786, top - 46, 1128, top)
+    top = 531 - index * 36
+    return (786, top - 33, 1128, top)
 
 
 def material_bounds(index):
@@ -32,9 +32,10 @@ def material_bounds(index):
     return (left, 104, left + 300, 170)
 
 
-def slot_bounds(index):
-    left = 196 + index * 270
-    return (left, 310, left + 254, 397)
+def slot_bounds(index, count=2):
+    width, step = (164, 176) if count == 3 else (254, 270)
+    left = 196 + index * step
+    return (left, 310, left + width, 397)
 
 
 class WorkbenchPanel:
@@ -86,7 +87,7 @@ class WorkbenchPanel:
             game.select_entry(game.selected_entry - 1)
         elif key in (sdl2.SDLK_DOWN, sdl2.SDLK_s):
             game.select_entry(game.selected_entry + 1)
-        elif key in (sdl2.SDLK_1, sdl2.SDLK_2):
+        elif key in (sdl2.SDLK_1, sdl2.SDLK_2, sdl2.SDLK_3):
             index = key - sdl2.SDLK_1
             materials = tuple(self.ingredients())
             if index < len(materials):
@@ -110,7 +111,7 @@ class WorkbenchPanel:
             if contains(material_bounds(index), x, y):
                 self.load_material(material)
                 return
-            if contains(slot_bounds(index), x, y) and game.state.job is None:
+            if contains(slot_bounds(index, len(self.ingredients())), x, y) and game.state.job is None:
                 game.state.unstage_craft_material(material)
                 game.feedback = ''
                 return
@@ -150,7 +151,7 @@ class WorkbenchPanel:
         fill_rect(387, 460, 134, 104, SURFACE)
         draw_item_icon(game, entry.image, 454, 512, 96, 96)
         for index, (material, required) in enumerate(recipe.ingredients.items()):
-            left, bottom, right, top = slot_bounds(index)
+            left, bottom, right, top = slot_bounds(index, len(recipe.ingredients))
             loaded = current_job or material in self.loaded_materials
             border_width = 3 if loaded else 1
             if loaded:
@@ -159,11 +160,18 @@ class WorkbenchPanel:
             fill_rect(left + border_width, bottom + border_width,
                       right - left - border_width * 2, top - bottom - border_width * 2, SURFACE)
             game.text(left + 14, 378, f'재료 {index + 1}', 15, CYAN if loaded else MUTED)
-            draw_item_icon(game, material, left + 31, 343, 42, 42)
-            game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
-            game.text(left + 178, 343, '×', 18, MUTED)
-            fill_rect(left + 199, 325, 43, 35, (53, 45, 30))
-            game.text(left + 211, 343, str(required), 26, GOLD)
+            if len(recipe.ingredients) == 3:
+                draw_item_icon(game, material, left + 31, 349, 40, 40)
+                game.text(left + 10, 322, MATERIAL_NAMES[material], 15)
+                game.text(left + 90, 349, '×', 18, MUTED)
+                fill_rect(left + 113, 332, 41, 34, (53, 45, 30))
+                game.text(left + 124, 349, str(required), 26, GOLD)
+            else:
+                draw_item_icon(game, material, left + 31, 343, 42, 42)
+                game.text(left + 60, 343, MATERIAL_NAMES[material], 15)
+                game.text(left + 178, 343, '×', 18, MUTED)
+                fill_rect(left + 199, 325, 43, 35, (53, 45, 30))
+                game.text(left + 211, 343, str(required), 26, GOLD)
         if state.job is None:
             game.text(344, 291, '제작 시간', 18, MUTED)
             seconds = str(recipe.seconds)
@@ -193,11 +201,11 @@ class WorkbenchPanel:
                       (36, 61, 70) if selected else SURFACE)
             if selected or hovered:
                 fill_rect(left, bottom, 3, top - bottom, GOLD if selected else BORDER)
-            draw_item_icon(game, item.image, left + 28, bottom + 23, 40, 40)
-            game.text(left + 59, bottom + 23, item.name, 18, GOLD if selected else CREAM)
-            fill_rect(1052, bottom + 8, 64, 30, INK)
+            draw_item_icon(game, item.image, left + 22, bottom + 16, 30, 30)
+            game.text(left + 45, bottom + 16, item.name, 18, GOLD if selected else CREAM)
+            fill_rect(1052, bottom + 3, 64, 27, INK)
             owned = state.equipment[item.image] + len(state.storage_units[item.image])
-            game.text(1061, bottom + 23, str(owned), 22, GOLD)
+            game.text(1061, bottom + 16, str(owned), 22, GOLD)
 
         # Only the selected recipe's materials are offered in the bottom strip.
         fill_rect(152, 195, 976, 1, BORDER)
@@ -205,7 +213,7 @@ class WorkbenchPanel:
         game.text(317, 184, '클릭해 투입 · 슬롯을 클릭하면 해제', 15, MUTED)
         for index, (material, required) in enumerate(recipe.ingredients.items()):
             left, bottom, right, top = material_bounds(index)
-            owned = state.materials[material]
+            owned = state.resource_inventory(material)[material]
             loaded = current_job or material in self.loaded_materials
             enough = material in self.loaded_materials or owned >= required
             color = CYAN if enough else RED

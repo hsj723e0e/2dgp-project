@@ -7,7 +7,7 @@ import random
 from time import monotonic
 
 from orders import (
-    CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL,
+    ADVANCED_EQUIPMENT, CUSTOMER_NAMES, INFORMATION_PRICE, MARKET_EVENTS, MARKET_INTERVAL,
     RENTAL_DURATIONS, RENTAL_SUCCESS_RATE, SALE_PRICES, RentalContract, create_order,
 )
 from workshop import EQUIPMENT, PERSONAL_EQUIPMENT
@@ -37,6 +37,9 @@ RECIPES = {
     "eq_drill_02": Recipe({"mat_02": 2, "mat_03": 1}, 14),
     "eq_suit_02": Recipe({"mat_02": 3, "mat_03": 2}, 16),
     "eq_oxygen_02": Recipe({"mat_02": 2, "mat_03": 2}, 14),
+    "eq_drill_advanced": Recipe({"mat_02": 4, "mat_03": 3, "item_chip": 1}, 20),
+    "eq_suit_advanced": Recipe({"mat_02": 6, "mat_03": 4, "item_chip": 1}, 24),
+    "eq_oxygen_advanced": Recipe({"mat_02": 4, "mat_03": 4, "item_chip": 1}, 22),
 }
 
 
@@ -82,6 +85,8 @@ def transfer_quantity(available, requested):
 
 def basic_upgrade_cost(unit):
     base_cost = 8 if unit.equipment.endswith("_01") else 12
+    if unit.equipment in ADVANCED_EQUIPMENT:
+        base_cost = 18
     return base_cost * (unit.level + 1)
 
 
@@ -181,7 +186,8 @@ class GameState:
     def inventory_used(self):
         material_slots = sum(quantity > 0 or self.staged_materials.get(image, 0) > 0
                              for image, quantity in self.materials.items())
-        return (material_slots + sum(quantity > 0 for quantity in self.rewards.values())
+        return (material_slots + sum(quantity > 0 or image in self.staged_materials
+                                   for image, quantity in self.rewards.items())
                 + sum(self.equipment.values())
                 + sum(level is not None for level in self.personal_equipment.values()))
 
@@ -251,12 +257,15 @@ class GameState:
             self.storage_units[equipment].remove(other)
         return True, f"장비 {count}개를 가방으로 옮겼습니다."
 
+    def resource_inventory(self, image):
+        return self.materials if image in self.materials else self.rewards
+
     def store_resource(self, image, quantity=None):
         if self.session_over:
             return False, "운영 시간이 종료되었습니다."
         if image not in self.resource_storage:
             return False, "재료와 보상 아이템만 보관할 수 있습니다."
-        inventory = self.materials if image in self.materials else self.rewards
+        inventory = self.resource_inventory(image)
         quantity = transfer_quantity(inventory[image], quantity)
         if quantity == 0:
             return False, "보관할 아이템이 없습니다."
@@ -272,7 +281,7 @@ class GameState:
         quantity = transfer_quantity(self.resource_storage[image], quantity)
         if quantity == 0:
             return False, "꺼낼 아이템이 없습니다."
-        inventory = self.materials if image in self.materials else self.rewards
+        inventory = self.resource_inventory(image)
         if inventory[image] == 0 and image not in self.staged_materials and self.inventory_free == 0:
             return False, "가방 9칸이 가득 찼습니다."
         inventory[image] += quantity
@@ -580,7 +589,8 @@ class GameState:
                 self.coins += remaining_reward
                 contract.received_reward += remaining_reward
             else:
-                if self.rewards[contract.reward_item] > 0 or self.inventory_free > 0:
+                if (self.rewards[contract.reward_item] > 0
+                        or contract.reward_item in self.staged_materials or self.inventory_free > 0):
                     self.rewards[contract.reward_item] += remaining_reward
                     contract.received_reward += remaining_reward
             if contract.received_reward == contract.reward_amount:
@@ -630,9 +640,10 @@ class GameState:
         if material in self.staged_materials:
             return True, ""
         required = RECIPES[equipment].ingredients[material]
-        if self.materials[material] < required:
+        inventory = self.resource_inventory(material)
+        if inventory[material] < required:
             return False, "재료가 부족합니다."
-        self.materials[material] -= required
+        inventory[material] -= required
         self.staged_equipment = equipment
         self.staged_materials[material] = required
         return True, ""
@@ -640,7 +651,7 @@ class GameState:
     def unstage_craft_material(self, material):
         quantity = self.staged_materials.pop(material, 0)
         if quantity:
-            self.materials[material] += quantity
+            self.resource_inventory(material)[material] += quantity
         if not self.staged_materials:
             self.staged_equipment = None
 
@@ -659,7 +670,7 @@ class GameState:
             return False, "작업대에서 장비를 제작 중입니다."
         ingredients = RECIPES[equipment].ingredients
         staged = self.staged_materials if self.staged_equipment == equipment else {}
-        if any(self.materials[name] + staged.get(name, 0) < quantity
+        if any(self.resource_inventory(name)[name] + staged.get(name, 0) < quantity
                for name, quantity in ingredients.items()):
             return False, "재료가 부족합니다."
         return True, ""
@@ -673,7 +684,7 @@ class GameState:
         if self.staged_equipment != equipment:
             self.clear_craft_materials()
         for name, quantity in recipe.ingredients.items():
-            self.materials[name] -= quantity - self.staged_materials.get(name, 0)
+            self.resource_inventory(name)[name] -= quantity - self.staged_materials.get(name, 0)
         self.staged_materials.clear()
         self.staged_equipment = None
         self.job = CraftJob(equipment, ready_at)
