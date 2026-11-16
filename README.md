@@ -318,44 +318,39 @@ Use case: stylized-concept. Production-ready equipment inventory sprite for a pi
 | 입력 | 동작 |
 | --- | --- |
 | WASD / 방향키 | 이동 |
-| 마우스 이동 | 드릴 조준 방향 선택 |
-| 좌클릭 길게 누르기 | 조준한 암석의 체력을 깎아 파괴, 이동하면서 사용 가능 |
+| E 길게 누르기 | 가까운 광맥 채집, 이동하면 중단 |
+| Space / 좌클릭 | 드릴 근접 공격 |
 | I / 인벤토리 버튼 | 가방 열기·닫기 |
 | 착륙선 입구에서 E / Enter | 우주선으로 귀환 |
 | Esc | 가방 닫기, 귀환 안내 |
 
-암석을 파괴하면 해당 행성의 자원이 떨어집니다. 105픽셀 안에서는 자원이 캐릭터 쪽으로 끌려오고 30픽셀 안에서 자동으로 회수합니다.
-같은 자원 묶음은 기존 가방 수량에 합치며 새 종류에는 빈칸이 필요합니다.
-가방이 가득 차면 드롭은 현장에 남고 공간을 확보한 뒤 다시 회수할 수 있습니다. 귀환 후 보관·제작·강화에 사용합니다.
+채집 자원은 기존 가방에 바로 합쳐집니다. 같은 자원 묶음은 수량을 합치며 새 종류에는 빈칸이 필요합니다.
+빈칸이 없으면 해당 광맥 채집을 중단합니다. 귀환 후 보관·제작·강화에 사용할 수 있습니다.
 가방을 열어도 산소와 위험 요소의 시간은 흐릅니다.
 체력이 0이 되면 공방으로 구조되고 이번 탐사 채집물을 잃습니다.
 출발 전 보유 자원과 장비는 보존합니다. 정상 귀환 시 채집물이 유지됩니다.
-우주선에서 다시 하선하면 체력·산소가 충전되고 새 암석 지대를 탐사합니다.
+우주선에서 다시 하선하면 체력·산소가 충전되고 새 광맥을 탐사합니다.
 기존 20분 운영 시간은 비행·탐사 중에도 계속 흐릅니다.
 
 ### 장비 성능과 위험 요소
 
 장비 등급 값은 초급 1, 중급 2, 고급 3, 개인 최상급 4입니다.
-드릴 위력 배율은 `1 + (드릴 등급 - 1) × 0.75 + 강화 단계 × 0.08`입니다.
-드릴은 전방 100픽셀 범위의 첫 대상에게 초당 `34 × 위력 배율` 피해를 줍니다.
-암석은 반경 27~49픽셀이며, 체력은 `(42 + 위험도 × 17) × 반경 / 34`입니다.
-파괴 보상은 `2 + 반경 // 18`개로, 암석에서 드롭된 뒤 회수해야 가방에 들어갑니다.
+채집 속도 배율은 `1 + (드릴 등급 - 1) × 0.55 + 강화 단계 × 0.04`입니다.
+광맥은 기본 1.6초마다 자원 1개를 지급하고, 채집 속도 배율에 따라 빨라집니다.
 우주복의 피해 배율은 `1 / (1 + (등급 - 1) × 0.25 + 강화 단계 × 0.035)`입니다.
 산소 최대량은 `90 + 산소 장치 등급 × 35 + 강화 단계 × 4`입니다.
 행성 위험도는 지구 0, 수성·화성 1, 금성 2, 목성·토성 3, 천왕성·해왕성 4, 태양 5입니다.
 산소는 초당 `1 + 위험도 × 0.16`씩 감소합니다.
 
-- 크기와 회전 속도가 다른 암석 14개가 지표 위에서 이동하며, 파괴한 만큼 새 암석이 나타납니다.
-- 암석에 충돌하면 `10 + 위험도 × 2`의 피해를 우주복 피해 배율에 따라 받습니다. 연속 충돌에는 0.85초의 피해 간격이 있습니다.
-- 위험 폭탄은 2~4개가 암석 사이에서 이동합니다. 접촉하거나 드릴로 건드리면 즉시 폭발합니다.
-- 폭탄은 반경 155픽셀 안의 캐릭터에게 `45 + 위험도 × 5`의 피해를 우주복 피해 배율에 따라 줍니다.
-- 소모된 폭탄은 4초 뒤 다시 나타납니다. 폭발 범위는 빨간 원과 파편으로 표시합니다.
+- 외계 생물은 650픽셀 안의 채집 소리에 반응해 8초 동안 추적합니다. 접근하면 공격하며 드릴로 처치할 수 있습니다.
+- 가스 분출 지점은 11초 주기이며 분출 전 2초간 노란 전조를 표시합니다. 분출은 1.5초 지속되고 원 밖으로 피할 수 있습니다.
+- 불안정 광맥은 노란 원으로 구분합니다. 누적 채집 2초 후 균열 경고가 뜨고 1.5초 뒤 폭발합니다. 폭발 반경은 115픽셀입니다.
 - 산소가 0이면 초당 체력 9를 잃습니다. 체력이 남아 있을 때 착륙선으로 돌아가 귀환할 수 있습니다.
 
-### 초기 탐사 에셋 생성 기록
+### 탐사 에셋 생성 기록
 
 내장 ImageGen으로 참고 화면의 픽셀아트 시점·색감에 맞춰 생성했습니다.
-9개 배경은 `asset/bg_planet_*.png`, 초기 지표 탐사용 투명 소품은 `asset/explore_ship.png`,
+9개 배경은 `asset/bg_planet_*.png`, 투명 소품은 `asset/explore_ship.png`,
 `asset/explore_deposit.png`, `asset/explore_alien.png`입니다.
 우주복 4방향 이동 시트는 `asset/player_exploration.png`이며 256×384, 64×96 셀 16개입니다.
 드릴 효과음 `asset/explore_drill.wav`는 코드로 합성한 0.2초 기계음입니다.
@@ -406,23 +401,16 @@ Remove the entire grey-brown gradient background from this sprite sheet, making 
 ```
 
 
-### 암석 파괴·상태 게이지 에셋 생성 기록
+### 체력·산소 상태 게이지 에셋
 
-내장 ImageGen으로 아래 에셋을 제작했습니다.
-`asset/explore_asteroid.png`는 160×160 투명 암석 스프라이트,
-`asset/explore_bomb.png`는 96×96 투명 위험 폭탄입니다.
-`asset/ui_mining_health.png`, `asset/ui_mining_oxygen.png`는 투명 여백을 정리한 320×78 프레임입니다.
-하트와 산소통 아이콘으로 두 게이지를 구분하며 프레임 내부의 동적 채움과 숫자는 실제 체력·산소량에 연결됩니다.
-참고 게임의 채굴·성장 구조는 [Space Rock Breaker 스팀 공식 소개](https://store.steampowered.com/app/4035270/Space_Rock_Breaker/?l=koreana)를 확인했습니다.
+내장 ImageGen으로 제작한 `asset/ui_mining_health.png`와 `asset/ui_mining_oxygen.png`를 사용합니다.
+두 파일은 투명 여백을 정리한 320×78 PNG입니다.
+하트와 산소통 아이콘으로 게이지를 구분하고 실제 체력·산소량에 따라 내부 채움과 현재·최대 숫자가 바뀝니다.
+산소 부족 상태는 붉은색으로 강조합니다.
 
 생성 프롬프트는 다음과 같습니다.
 
 ```text
-asset/explore_asteroid.png
-Use case: stylized-concept. Production-ready single asteroid sprite for a Korean top-down 2D space mining game. One irregular floating dark grey asteroid, viewed from slightly above, chunky pixel art with crisp stepped outline, several large craters, angular rock ridges and a few subtle teal and warm ochre mineral seams embedded in the rock. Strong compact asymmetric silhouette suitable for rotating and scaling between 55 and 130 pixels on screen. Light from upper left, dark navy shadows, muted stone tones so damage flashes and resource overlays remain readable. The entire asteroid centered, using 85 percent of square canvas. Genuine transparent background. No floor, no ground shadow, no atmosphere, no stars, no labels, no text, no interface, no border, no glow outside silhouette. One complete asteroid only.
-
-asset/explore_bomb.png
-Use case: stylized-concept. A single hazardous floating space mine bomb sprite for a top-down 2D pixel-art planetary asteroid-mining game. Compact dark navy and gunmetal spherical mine with six short blunt metal protrusions, a very clear bright red central warning lamp and two small amber indicator lights. Strong readable dangerous silhouette, industrial sci-fi design, chunky pixel-art stepped edges, restrained grey metal highlights, viewed slightly from above. Centered square composition, whole bomb visible using 80 percent of frame, designed to remain readable at 45-65 pixels. Genuine transparent background. No ground, no stars, no floor shadow, no surrounding scene, no text, no letters, no labels, no border, no explosion. One complete bomb only.
 
 asset/ui_mining_health.png
 Use case: stylized-concept. Asset type: a single empty horizontal HUD meter frame for a pixel-art sci-fi mining game. A clearly recognizable bright red pixel heart icon in the left badge. Pale silver frame with warm brass tiny corner rivets and red accent notches. Draw one compact wide rectangular industrial meter frame with a larger square icon badge on the left, connected to a long horizontal EMPTY dark navy inset meter well on the right. Crisp chunky pixel-art, clean 2-3 pixel stepped outer edges, high readability, restrained mechanical detail. Overall frame silhouette approximately six times wider than tall. The empty meter well is a SIMPLE straight rectangular region, starts 25 percent from the left, ends 95 percent from left, spans 32 to 68 percent of the total height. Keep that exact clear rectangular region uninterrupted so runtime code can draw a colored fill over it. No filled colored meter, no bars inside, no numerals, no captions, no words other than the O₂ symbol if specified. One complete frame only, no variants, no sheet. Center the frame on genuine transparent background with no scenery, no drop shadow or glow outside. Wide composition.

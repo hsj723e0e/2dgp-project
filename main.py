@@ -60,7 +60,7 @@ class Game:
         self.exploration_images = {planet.image: p2.load_image(str(ASSETS / f"bg_planet_{planet.image}.png"))
                                    for planet in PLANETS}
         self.exploration_images.update({name: p2.load_image(str(ASSETS / f"explore_{name}.png"))
-                                        for name in ("ship", "asteroid", "bomb")})
+                                        for name in ("ship", "deposit", "alien")})
         self.mining_meters = {kind: p2.load_image(str(ASSETS / f"ui_mining_{kind}.png"))
                               for kind in ("health", "oxygen")}
         self.drill_sound = p2.load_wav(str(ASSETS / "explore_drill.wav")) if p2.audio_on else None
@@ -121,7 +121,6 @@ class Game:
         self.enhancement_panel.reset()
         self.expedition = Expedition(self.state)
         self.next_drill_sound = 0.0
-        self.surface_view.drill_held = False
         self.navigation_open = False
         self.running = True
 
@@ -272,22 +271,15 @@ class Game:
                 self.feedback = ""
         self.expedition.update_flight()
         if self.expedition.outside:
-            dx, dy, _ = self.movement_input()
+            dx, dy, keys = self.movement_input()
             focused = bool(sdl2.SDL_GetKeyboardFocus())
             if self.inventory_open:
                 dx = dy = 0
             self.player.update(dx, dy, dt, SURFACE_ROOM, self.expedition.obstacles)
-            if not focused:
-                self.surface_view.drill_held = False
-            mining = focused and not self.inventory_open and self.surface_view.drill_held
-            if not self.player.moving:
-                aim_x, aim_y = self.mouse[0]-self.player.x, self.mouse[1]-self.player.y-30
-                if abs(aim_x) > abs(aim_y):
-                    self.player.facing = "right" if aim_x > 0 else "left"
-                else:
-                    self.player.facing = "up" if aim_y > 0 else "down"
-            self.expedition.update_surface(self.player, dt, mining, self.mouse)
-            if (self.drill_sound and self.expedition.drilling
+            mining = (focused and not self.inventory_open and not (dx or dy)
+                      and bool(keys[sdl2.SDL_SCANCODE_E]) and not self.expedition.near_ship(self.player))
+            self.expedition.update_surface(self.player, dt, mining)
+            if (self.drill_sound and self.expedition.mining_node is not None
                     and self.expedition.surface_time >= self.next_drill_sound):
                 self.drill_sound.play()
                 self.next_drill_sound = self.expedition.surface_time + 0.22
