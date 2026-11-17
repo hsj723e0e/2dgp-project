@@ -418,3 +418,9 @@ Use case: stylized-concept. Asset type: a single empty horizontal HUD meter fram
 asset/ui_mining_oxygen.png
 Use case: stylized-concept. Asset type: a single empty horizontal HUD meter frame for a pixel-art sci-fi mining game. A clearly recognizable small cyan oxygen cylinder with dark navy O₂ symbol in the left badge. Pale silver frame with cyan accent notches and tiny brass corner rivets. Draw one compact wide rectangular industrial meter frame with a larger square icon badge on the left, connected to a long horizontal EMPTY dark navy inset meter well on the right. Crisp chunky pixel-art, clean 2-3 pixel stepped outer edges, high readability, restrained mechanical detail. Overall frame silhouette approximately six times wider than tall. The empty meter well is a SIMPLE straight rectangular region, starts 25 percent from the left, ends 95 percent from left, spans 32 to 68 percent of the total height. Keep that exact clear rectangular region uninterrupted so runtime code can draw a colored fill over it. No filled colored meter, no bars inside, no numerals, no captions, no words other than the O₂ symbol if specified. One complete frame only, no variants, no sheet. Center the frame on genuine transparent background with no scenery, no drop shadow or glow outside. Wide composition.
 ```
+
+## ?? ??
+
+1차 발표: https://www.youtube.com/watch?v=1Wmip-6BfUY
+
+2차 발표: https://www.youtube.com/watch?v=sCiKfOYbg6U
