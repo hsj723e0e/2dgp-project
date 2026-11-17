@@ -1,5 +1,9 @@
 📎 **발표 자료**: [개발진행보고 PPT 다운로드](documents/%EA%B0%9C%EB%B0%9C%EC%A7%84%ED%96%89%EB%B3%B4%EA%B3%A0.pptx?raw=true) · [발표자료 PDF](documents/%EB%B0%9C%ED%91%9C%EC%9E%90%EB%A3%8C.pdf) · [기획서 PDF](documents/%EA%B8%B0%ED%9A%8D%EC%84%9C.pdf)
 
+1차 발표: https://www.youtube.com/watch?v=1Wmip-6BfUY
+
+2차 발표: https://www.youtube.com/watch?v=sCiKfOYbg6U
+
 # 나만의 우주공방
 
 기획서의 공방을 내려다보기 시점으로 구현한 Python + pico2d 프로젝트입니다.
